@@ -103,6 +103,10 @@ Visit `http://localhost:8000/demo-candidate` to see the demo site.
 | POST | `/api/sites/{id}/contact` | Submit contact message |
 | POST | `/api/sites/{id}/volunteers` | Register volunteer |
 
+## Documentation
+
+- [Technology Decisions](docs/TECH_DECISIONS.md) — architecture, platform choices (Tauri, React Native), and rationale
+
 ## License
 
 MIT
