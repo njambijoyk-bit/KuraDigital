@@ -193,6 +193,7 @@ class CampaignController extends Controller
     {
         $member = CampaignMember::where('campaign_id', $campaign->id)
             ->where('user_id', $request->user()->id)
+            ->where('status', '!=', 'suspended')
             ->first();
 
         if (!$member || !in_array($member->role, $roles)) {

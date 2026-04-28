@@ -41,11 +41,12 @@ const useCampaignStore = create((set, get) => ({
     },
 
     updateCampaign: async (id, data) => {
+        const numId = Number(id);
         try {
             const res = await api.put(`/campaigns/${id}`, data);
             set((state) => ({
-                campaigns: state.campaigns.map((c) => (c.id === id ? res.data.data : c)),
-                currentCampaign: state.currentCampaign?.id === id ? res.data.data : state.currentCampaign,
+                campaigns: state.campaigns.map((c) => (c.id === numId ? res.data.data : c)),
+                currentCampaign: state.currentCampaign?.id === numId ? res.data.data : state.currentCampaign,
             }));
             return res.data.data;
         } catch (err) {
@@ -55,11 +56,12 @@ const useCampaignStore = create((set, get) => ({
     },
 
     deleteCampaign: async (id) => {
+        const numId = Number(id);
         try {
             await api.delete(`/campaigns/${id}`);
             set((state) => ({
-                campaigns: state.campaigns.filter((c) => c.id !== id),
-                currentCampaign: state.currentCampaign?.id === id ? null : state.currentCampaign,
+                campaigns: state.campaigns.filter((c) => c.id !== numId),
+                currentCampaign: state.currentCampaign?.id === numId ? null : state.currentCampaign,
             }));
             return true;
         } catch {
