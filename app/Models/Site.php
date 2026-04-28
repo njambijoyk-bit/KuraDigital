@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Site extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'campaign_id',
         'slug', 'candidate_name', 'position', 'constituency', 'county', 'party',
         'slogan', 'slogan_sw', 'primary_color', 'secondary_color',
         'logo_url', 'portrait_url', 'hero_image_url', 'about_image_url',
@@ -25,6 +27,11 @@ class Site extends Model
         'milestones' => 'array',
         'is_active' => 'boolean',
     ];
+
+    public function campaign(): BelongsTo
+    {
+        return $this->belongsTo(Campaign::class);
+    }
 
     public function manifestoPillars()
     {

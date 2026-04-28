@@ -1,13 +1,35 @@
 <?php
 
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\SiteController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Auth
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    // Auth
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+
+    // Campaigns
+    Route::get('/campaigns', [CampaignController::class, 'index']);
+    Route::post('/campaigns', [CampaignController::class, 'store']);
+    Route::get('/campaigns/{campaign}', [CampaignController::class, 'show']);
+    Route::put('/campaigns/{campaign}', [CampaignController::class, 'update']);
+    Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy']);
+
+    // Campaign Members
+    Route::get('/campaigns/{campaign}/members', [CampaignController::class, 'members']);
+    Route::post('/campaigns/{campaign}/members', [CampaignController::class, 'inviteMember']);
+    Route::put('/campaigns/{campaign}/members/{member}', [CampaignController::class, 'updateMember']);
+    Route::delete('/campaigns/{campaign}/members/{member}', [CampaignController::class, 'removeMember']);
 });
 
+// Public site routes (no auth required)
 Route::get('/sites/{slug}', [SiteController::class, 'show']);
 Route::get('/sites/{siteId}/manifesto', [SiteController::class, 'manifesto']);
 Route::get('/sites/{siteId}/events', [SiteController::class, 'events']);
