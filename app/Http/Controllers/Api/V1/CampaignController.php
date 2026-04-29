@@ -112,6 +112,8 @@ class CampaignController extends Controller
 
     public function hierarchy(Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewChildren', $campaign);
+
         $campaign->load('descendants');
 
         return response()->json([
