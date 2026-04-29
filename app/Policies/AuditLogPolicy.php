@@ -10,30 +10,26 @@ class AuditLogPolicy
 {
     public function viewAny(User $user, Campaign $campaign): bool
     {
-        if (!$user->can('audit.view')) {
-            return false;
-        }
-
         if ($user->hasRole(['platform-owner', 'platform-support'])) {
-            return true;
+            return $user->can('audit.view');
         }
 
-        return $user->isMemberOf($campaign) &&
-            $user->hasRole([
+        return $user->campaignCan('audit.view', $campaign) &&
+            $user->campaignHasRole([
                 'campaign-owner', 'campaign-director', 'deputy-campaign-director',
                 'finance-director', 'legal-compliance-officer', 'auditor',
-            ]);
+            ], $campaign);
     }
 
     public function export(User $user, Campaign $campaign): bool
     {
-        if (!$user->can('audit.export')) {
-            return false;
+        if ($user->hasRole('platform-owner')) {
+            return $user->can('audit.export');
         }
 
-        return $user->hasRole(['platform-owner']) ||
-            ($user->isMemberOf($campaign) && $user->hasRole([
+        return $user->campaignCan('audit.export', $campaign) &&
+            $user->campaignHasRole([
                 'campaign-owner', 'campaign-director', 'legal-compliance-officer', 'auditor',
-            ]));
+            ], $campaign);
     }
 }

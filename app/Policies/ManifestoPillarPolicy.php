@@ -9,21 +9,21 @@ class ManifestoPillarPolicy
 {
     public function viewAny(User $user, Campaign $campaign): bool
     {
-        return $user->can('manifesto.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('manifesto.view', $campaign);
     }
 
     public function create(User $user, Campaign $campaign): bool
     {
-        return $user->can('manifesto.create') && $user->isMemberOf($campaign);
+        return $user->campaignCan('manifesto.create', $campaign);
     }
 
     public function update(User $user, Campaign $campaign): bool
     {
-        return $user->can('manifesto.edit') && $user->isMemberOf($campaign);
+        return $user->campaignCan('manifesto.edit', $campaign);
     }
 
     public function delete(User $user, Campaign $campaign): bool
     {
-        return $user->can('manifesto.delete') && $user->isMemberOf($campaign);
+        return $user->campaignCan('manifesto.delete', $campaign);
     }
 }

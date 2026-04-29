@@ -18,49 +18,46 @@ class CampaignPolicy
             return true;
         }
 
-        return $user->can('campaign.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('campaign.view', $campaign);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('campaign.create-child') || $user->hasRole(['platform-owner', 'campaign-owner']);
+        if ($user->hasRole('platform-owner')) {
+            return true;
+        }
+
+        return $user->can('campaign.create-child');
     }
 
     public function update(User $user, Campaign $campaign): bool
     {
-        if (!$user->can('campaign.edit')) {
-            return false;
-        }
-
         if ($user->hasRole('platform-owner')) {
             return true;
         }
 
-        return $user->isMemberOf($campaign) &&
-            $user->hasRole(['campaign-owner', 'campaign-director', 'deputy-campaign-director']);
+        return $user->campaignCan('campaign.edit', $campaign) &&
+            $user->campaignHasRole(['campaign-owner', 'campaign-director', 'deputy-campaign-director'], $campaign);
     }
 
     public function delete(User $user, Campaign $campaign): bool
     {
-        if (!$user->can('campaign.delete')) {
-            return false;
-        }
-
         if ($user->hasRole('platform-owner')) {
             return true;
         }
 
-        return $user->isMemberOf($campaign) && $user->hasRole('campaign-owner');
+        return $user->campaignCan('campaign.delete', $campaign) &&
+            $user->campaignHasRole('campaign-owner', $campaign);
     }
 
     public function manageSettings(User $user, Campaign $campaign): bool
     {
-        if (!$user->can('campaign.manage-settings')) {
-            return false;
+        if ($user->hasRole('platform-owner')) {
+            return true;
         }
 
-        return $user->hasRole('platform-owner') ||
-            ($user->isMemberOf($campaign) && $user->hasRole(['campaign-owner', 'campaign-director']));
+        return $user->campaignCan('campaign.manage-settings', $campaign) &&
+            $user->campaignHasRole(['campaign-owner', 'campaign-director'], $campaign);
     }
 
     public function viewChildren(User $user, Campaign $campaign): bool
@@ -69,7 +66,7 @@ class CampaignPolicy
             return true;
         }
 
-        if (!$user->can('campaign.view-all-children')) {
+        if (!$user->campaignCan('campaign.view-all-children', $campaign)) {
             return false;
         }
 

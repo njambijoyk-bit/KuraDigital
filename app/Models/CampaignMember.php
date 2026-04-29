@@ -10,6 +10,7 @@ class CampaignMember extends Model
     protected $fillable = [
         'user_id',
         'campaign_id',
+        'role',
         'visibility_scope',
         'assigned_wards',
         'assigned_constituencies',

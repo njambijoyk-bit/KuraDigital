@@ -9,26 +9,26 @@ class VolunteerPolicy
 {
     public function viewAny(User $user, Campaign $campaign): bool
     {
-        return $user->can('volunteers.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('volunteers.view', $campaign);
     }
 
     public function view(User $user, Campaign $campaign): bool
     {
-        return $user->can('volunteers.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('volunteers.view', $campaign);
     }
 
     public function update(User $user, Campaign $campaign): bool
     {
-        return $user->can('volunteers.edit') && $user->isMemberOf($campaign);
+        return $user->campaignCan('volunteers.edit', $campaign);
     }
 
     public function delete(User $user, Campaign $campaign): bool
     {
-        return $user->can('volunteers.delete') && $user->isMemberOf($campaign);
+        return $user->campaignCan('volunteers.delete', $campaign);
     }
 
     public function export(User $user, Campaign $campaign): bool
     {
-        return $user->can('volunteers.export') && $user->isMemberOf($campaign);
+        return $user->campaignCan('volunteers.export', $campaign);
     }
 }

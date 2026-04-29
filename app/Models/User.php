@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -60,7 +61,7 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Campaign::class, 'campaign_members')
             ->withPivot([
-                'visibility_scope', 'assigned_wards', 'assigned_constituencies',
+                'role', 'visibility_scope', 'assigned_wards', 'assigned_constituencies',
                 'assigned_counties', 'assigned_polling_stations', 'is_active',
             ])
             ->withTimestamps();
@@ -101,5 +102,31 @@ class User extends Authenticatable
             ->where('campaign_id', $campaign->id)
             ->where('is_active', true)
             ->first();
+    }
+
+    public function campaignRole(Campaign $campaign): ?string
+    {
+        $membership = $this->membershipFor($campaign);
+        return $membership?->role;
+    }
+
+    public function campaignHasRole(string|array $roles, Campaign $campaign): bool
+    {
+        $campaignRole = $this->campaignRole($campaign);
+        if (!$campaignRole) {
+            return false;
+        }
+        return in_array($campaignRole, (array) $roles, true);
+    }
+
+    public function campaignCan(string $permission, Campaign $campaign): bool
+    {
+        $membership = $this->membershipFor($campaign);
+        if (!$membership || !$membership->role) {
+            return false;
+        }
+
+        $role = Role::findByName($membership->role, 'web');
+        return $role->hasPermissionTo($permission);
     }
 }

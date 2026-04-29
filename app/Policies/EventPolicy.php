@@ -9,21 +9,21 @@ class EventPolicy
 {
     public function viewAny(User $user, Campaign $campaign): bool
     {
-        return $user->can('events.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('events.view', $campaign);
     }
 
     public function create(User $user, Campaign $campaign): bool
     {
-        return $user->can('events.create') && $user->isMemberOf($campaign);
+        return $user->campaignCan('events.create', $campaign);
     }
 
     public function update(User $user, Campaign $campaign): bool
     {
-        return $user->can('events.edit') && $user->isMemberOf($campaign);
+        return $user->campaignCan('events.edit', $campaign);
     }
 
     public function delete(User $user, Campaign $campaign): bool
     {
-        return $user->can('events.delete') && $user->isMemberOf($campaign);
+        return $user->campaignCan('events.delete', $campaign);
     }
 }
