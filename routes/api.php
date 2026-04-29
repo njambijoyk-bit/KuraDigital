@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\GalleryController;
 use App\Http\Controllers\Api\V1\ManifestoController;
 use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\NewsController;
+use App\Http\Controllers\Api\V1\OpponentController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\SiteSettingsController;
 use App\Http\Controllers\Api\V1\TeamController;
@@ -146,6 +147,19 @@ Route::prefix('v1')->group(function () {
             Route::get('/contacts/{message}', [ContactMessageController::class, 'show']);
             Route::put('/contacts/{message}', [ContactMessageController::class, 'update']);
             Route::delete('/contacts/{message}', [ContactMessageController::class, 'destroy']);
+
+            // Opponents
+            Route::get('/opponents', [OpponentController::class, 'index']);
+            Route::post('/opponents', [OpponentController::class, 'store']);
+            Route::get('/opponents/{opponent}', [OpponentController::class, 'show']);
+            Route::put('/opponents/{opponent}', [OpponentController::class, 'update']);
+            Route::delete('/opponents/{opponent}', [OpponentController::class, 'destroy']);
+
+            // Opponent research
+            Route::get('/opponents/{opponent}/research', [OpponentController::class, 'researchIndex']);
+            Route::post('/opponents/{opponent}/research', [OpponentController::class, 'researchStore']);
+            Route::put('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchUpdate']);
+            Route::delete('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchDestroy']);
         });
     });
 });
