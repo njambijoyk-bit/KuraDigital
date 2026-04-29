@@ -90,6 +90,21 @@ class Campaign extends Model
         return $this->hasMany(TeamInvitation::class);
     }
 
+    public function opponentProfiles(): HasMany
+    {
+        return $this->hasMany(OpponentProfile::class);
+    }
+
+    public function opponentResearch(): HasMany
+    {
+        return $this->hasMany(OpponentResearch::class);
+    }
+
+    public function opponentSwotEntries(): HasMany
+    {
+        return $this->hasMany(OpponentSwotEntry::class);
+    }
+
     public function ancestors(): array
     {
         $ancestors = [];

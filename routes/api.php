@@ -11,6 +11,9 @@ use App\Http\Controllers\Api\V1\ManifestoController;
 use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\NewsController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\OpponentProfileController;
+use App\Http\Controllers\Api\V1\OpponentResearchController;
+use App\Http\Controllers\Api\V1\OpponentSwotController;
 use App\Http\Controllers\Api\V1\SiteSettingsController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\VolunteerController;
@@ -146,6 +149,34 @@ Route::prefix('v1')->group(function () {
             Route::get('/contacts/{message}', [ContactMessageController::class, 'show']);
             Route::put('/contacts/{message}', [ContactMessageController::class, 'update']);
             Route::delete('/contacts/{message}', [ContactMessageController::class, 'destroy']);
+
+            // --- Phase 1C: Opponent Intelligence ---
+
+            // Opponent profiles
+            Route::get('/opponents/overview', [OpponentProfileController::class, 'overview']);
+            Route::get('/opponents/comparison', [OpponentProfileController::class, 'comparison']);
+            Route::get('/opponents', [OpponentProfileController::class, 'index']);
+            Route::post('/opponents', [OpponentProfileController::class, 'store']);
+            Route::get('/opponents/{opponent}', [OpponentProfileController::class, 'show']);
+            Route::put('/opponents/{opponent}', [OpponentProfileController::class, 'update']);
+            Route::delete('/opponents/{opponent}', [OpponentProfileController::class, 'destroy']);
+
+            // Opponent research (cross-opponent)
+            Route::get('/opponents/research/recent', [OpponentResearchController::class, 'recent']);
+
+            // Opponent research (per opponent)
+            Route::get('/opponents/{opponent}/research', [OpponentResearchController::class, 'index']);
+            Route::post('/opponents/{opponent}/research', [OpponentResearchController::class, 'store']);
+            Route::get('/opponents/{opponent}/research/{research}', [OpponentResearchController::class, 'show']);
+            Route::put('/opponents/{opponent}/research/{research}', [OpponentResearchController::class, 'update']);
+            Route::delete('/opponents/{opponent}/research/{research}', [OpponentResearchController::class, 'destroy']);
+
+            // Opponent SWOT analysis
+            Route::get('/opponents/{opponent}/swot', [OpponentSwotController::class, 'index']);
+            Route::post('/opponents/{opponent}/swot', [OpponentSwotController::class, 'store']);
+            Route::get('/opponents/{opponent}/swot/{entry}', [OpponentSwotController::class, 'show']);
+            Route::put('/opponents/{opponent}/swot/{entry}', [OpponentSwotController::class, 'update']);
+            Route::delete('/opponents/{opponent}/swot/{entry}', [OpponentSwotController::class, 'destroy']);
         });
     });
 });
