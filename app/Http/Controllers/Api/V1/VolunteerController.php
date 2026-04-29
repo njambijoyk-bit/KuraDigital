@@ -23,6 +23,12 @@ class VolunteerController extends Controller
 
         $query = $site->volunteers();
 
+        // Apply geographic ABAC filters
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership) {
+            $membership->applyGeographicFilters($query, ['ward']);
+        }
+
         if ($request->has('ward')) {
             $query->where('ward', $request->input('ward'));
         }
@@ -50,12 +56,17 @@ class VolunteerController extends Controller
         return response()->json($volunteers);
     }
 
-    public function show(Campaign $campaign, Volunteer $volunteer): JsonResponse
+    public function show(Request $request, Campaign $campaign, Volunteer $volunteer): JsonResponse
     {
         $this->authorize('view', [Volunteer::class, $campaign]);
 
         if (!$this->belongsToCampaign($campaign, $volunteer)) {
             return response()->json(['message' => 'Volunteer not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($volunteer)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         return response()->json(['volunteer' => $volunteer]);
@@ -67,6 +78,11 @@ class VolunteerController extends Controller
 
         if (!$this->belongsToCampaign($campaign, $volunteer)) {
             return response()->json(['message' => 'Volunteer not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($volunteer)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $validated = $request->validate([
@@ -90,12 +106,17 @@ class VolunteerController extends Controller
         ]);
     }
 
-    public function destroy(Campaign $campaign, Volunteer $volunteer): JsonResponse
+    public function destroy(Request $request, Campaign $campaign, Volunteer $volunteer): JsonResponse
     {
         $this->authorize('delete', [Volunteer::class, $campaign]);
 
         if (!$this->belongsToCampaign($campaign, $volunteer)) {
             return response()->json(['message' => 'Volunteer not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($volunteer)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $volunteer->delete();
@@ -114,6 +135,12 @@ class VolunteerController extends Controller
         }
 
         $query = $site->volunteers();
+
+        // Apply geographic ABAC filters
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership) {
+            $membership->applyGeographicFilters($query, ['ward']);
+        }
 
         if ($request->has('ward')) {
             $query->where('ward', $request->input('ward'));

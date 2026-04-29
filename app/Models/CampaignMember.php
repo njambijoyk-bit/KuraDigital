@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -75,6 +76,53 @@ class CampaignMember extends Model
             return true;
         }
         return in_array($station, $stations, true);
+    }
+
+    public function hasGeographicAccessTo(Model $resource): bool
+    {
+        if (method_exists($resource, 'getAttribute')) {
+            $ward = $resource->getAttribute('ward');
+            $constituency = $resource->getAttribute('constituency');
+            $county = $resource->getAttribute('county');
+
+            if ($ward && !$this->hasWardAccess($ward)) {
+                return false;
+            }
+            if ($constituency && !$this->hasConstituencyAccess($constituency)) {
+                return false;
+            }
+            if ($county && !$this->hasCountyAccess($county)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function applyGeographicFilters(Builder $query, array $fields = ['ward', 'constituency', 'county']): Builder
+    {
+        if (in_array('ward', $fields) && !empty($this->assigned_wards)) {
+            $query->where(function (Builder $q) {
+                $q->whereIn('ward', $this->assigned_wards)
+                    ->orWhereNull('ward');
+            });
+        }
+
+        if (in_array('constituency', $fields) && !empty($this->assigned_constituencies)) {
+            $query->where(function (Builder $q) {
+                $q->whereIn('constituency', $this->assigned_constituencies)
+                    ->orWhereNull('constituency');
+            });
+        }
+
+        if (in_array('county', $fields) && !empty($this->assigned_counties)) {
+            $query->where(function (Builder $q) {
+                $q->whereIn('county', $this->assigned_counties)
+                    ->orWhereNull('county');
+            });
+        }
+
+        return $query;
     }
 
     public function deactivate(): void
