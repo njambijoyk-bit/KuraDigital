@@ -12,6 +12,8 @@ class ProjectController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [Project::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -43,6 +45,8 @@ class ProjectController extends Controller
 
     public function store(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('create', [Project::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -72,6 +76,8 @@ class ProjectController extends Controller
 
     public function show(Campaign $campaign, Project $project): JsonResponse
     {
+        $this->authorize('viewAny', [Project::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $project)) {
             return response()->json(['message' => 'Project not found.'], 404);
         }
@@ -81,6 +87,8 @@ class ProjectController extends Controller
 
     public function update(Request $request, Campaign $campaign, Project $project): JsonResponse
     {
+        $this->authorize('update', [Project::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $project)) {
             return response()->json(['message' => 'Project not found.'], 404);
         }
@@ -105,6 +113,8 @@ class ProjectController extends Controller
 
     public function destroy(Campaign $campaign, Project $project): JsonResponse
     {
+        $this->authorize('delete', [Project::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $project)) {
             return response()->json(['message' => 'Project not found.'], 404);
         }

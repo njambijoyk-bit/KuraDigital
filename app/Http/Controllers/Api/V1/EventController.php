@@ -12,6 +12,8 @@ class EventController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [Event::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -47,6 +49,8 @@ class EventController extends Controller
 
     public function store(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('create', [Event::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -76,6 +80,8 @@ class EventController extends Controller
 
     public function show(Campaign $campaign, Event $event): JsonResponse
     {
+        $this->authorize('viewAny', [Event::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $event)) {
             return response()->json(['message' => 'Event not found.'], 404);
         }
@@ -85,6 +91,8 @@ class EventController extends Controller
 
     public function update(Request $request, Campaign $campaign, Event $event): JsonResponse
     {
+        $this->authorize('update', [Event::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $event)) {
             return response()->json(['message' => 'Event not found.'], 404);
         }
@@ -109,6 +117,8 @@ class EventController extends Controller
 
     public function destroy(Campaign $campaign, Event $event): JsonResponse
     {
+        $this->authorize('delete', [Event::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $event)) {
             return response()->json(['message' => 'Event not found.'], 404);
         }

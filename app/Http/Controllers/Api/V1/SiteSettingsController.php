@@ -13,6 +13,8 @@ class SiteSettingsController extends Controller
 {
     public function show(Campaign $campaign): JsonResponse
     {
+        $this->authorize('view', [Site::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -24,6 +26,8 @@ class SiteSettingsController extends Controller
 
     public function store(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('create', [Site::class, $campaign]);
+
         if ($campaign->site) {
             return response()->json(['message' => 'Campaign already has a site.'], 409);
         }
@@ -69,6 +73,8 @@ class SiteSettingsController extends Controller
 
     public function update(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('update', [Site::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -118,6 +124,8 @@ class SiteSettingsController extends Controller
 
     public function destroy(Campaign $campaign): JsonResponse
     {
+        $this->authorize('delete', [Site::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {

@@ -13,6 +13,8 @@ class ContactMessageController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [ContactMessage::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -49,6 +51,8 @@ class ContactMessageController extends Controller
 
     public function show(Campaign $campaign, ContactMessage $message): JsonResponse
     {
+        $this->authorize('view', [ContactMessage::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $message)) {
             return response()->json(['message' => 'Message not found.'], 404);
         }
@@ -62,6 +66,8 @@ class ContactMessageController extends Controller
 
     public function update(Request $request, Campaign $campaign, ContactMessage $message): JsonResponse
     {
+        $this->authorize('update', [ContactMessage::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $message)) {
             return response()->json(['message' => 'Message not found.'], 404);
         }
@@ -87,6 +93,8 @@ class ContactMessageController extends Controller
 
     public function destroy(Campaign $campaign, ContactMessage $message): JsonResponse
     {
+        $this->authorize('delete', [ContactMessage::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $message)) {
             return response()->json(['message' => 'Message not found.'], 404);
         }
@@ -98,6 +106,8 @@ class ContactMessageController extends Controller
 
     public function export(Request $request, Campaign $campaign): StreamedResponse
     {
+        $this->authorize('export', [ContactMessage::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
