@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Site extends Model
 {
-    use HasFactory;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'slug', 'candidate_name', 'position', 'constituency', 'county', 'party',
@@ -26,37 +29,72 @@ class Site extends Model
         'is_active' => 'boolean',
     ];
 
-    public function manifestoPillars()
+    public function campaign(): BelongsTo
+    {
+        return $this->belongsTo(Campaign::class, 'id', 'site_id');
+    }
+
+    public function getAuditCampaignId(): ?int
+    {
+        return Campaign::where('site_id', $this->id)->value('id');
+    }
+
+    public function manifestoPillars(): HasMany
     {
         return $this->hasMany(ManifestoPillar::class)->orderBy('sort_order');
     }
 
-    public function events()
+    public function allManifestoPillars(): HasMany
+    {
+        return $this->hasMany(ManifestoPillar::class)->orderBy('sort_order');
+    }
+
+    public function events(): HasMany
     {
         return $this->hasMany(Event::class)->where('is_published', true)->orderBy('date');
     }
 
-    public function newsArticles()
+    public function allEvents(): HasMany
+    {
+        return $this->hasMany(Event::class)->orderByDesc('date');
+    }
+
+    public function newsArticles(): HasMany
     {
         return $this->hasMany(NewsArticle::class)->where('is_published', true)->orderByDesc('date');
     }
 
-    public function galleryItems()
+    public function allNewsArticles(): HasMany
+    {
+        return $this->hasMany(NewsArticle::class)->orderByDesc('date');
+    }
+
+    public function galleryItems(): HasMany
     {
         return $this->hasMany(GalleryItem::class)->orderBy('sort_order');
     }
 
-    public function projects()
+    public function allGalleryItems(): HasMany
+    {
+        return $this->hasMany(GalleryItem::class)->orderBy('sort_order');
+    }
+
+    public function projects(): HasMany
     {
         return $this->hasMany(Project::class)->orderBy('sort_order');
     }
 
-    public function volunteers()
+    public function allProjects(): HasMany
+    {
+        return $this->hasMany(Project::class)->orderBy('sort_order');
+    }
+
+    public function volunteers(): HasMany
     {
         return $this->hasMany(Volunteer::class);
     }
 
-    public function contactMessages()
+    public function contactMessages(): HasMany
     {
         return $this->hasMany(ContactMessage::class);
     }
