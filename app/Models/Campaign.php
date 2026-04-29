@@ -101,6 +101,11 @@ class Campaign extends Model
         return array_reverse($ancestors);
     }
 
+    public function getAuditCampaignId(): int
+    {
+        return $this->id;
+    }
+
     public function isDescendantOf(Campaign $campaign): bool
     {
         $current = $this->parent;
