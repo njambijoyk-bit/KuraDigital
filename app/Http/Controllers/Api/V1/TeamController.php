@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\CampaignMember;
 use App\Models\TeamInvitation;
 use App\Models\User;
+use App\Services\RoleHierarchy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -40,6 +41,17 @@ class TeamController extends Controller
             'assigned_counties' => ['nullable', 'array'],
             'assigned_counties.*' => ['string'],
         ]);
+
+        // Prevent role escalation
+        $assignerRole = $request->user()->hasRole('platform-owner')
+            ? 'platform-owner'
+            : $request->user()->campaignRole($campaign);
+
+        if (!$assignerRole || !RoleHierarchy::canAssign($assignerRole, $validated['role'])) {
+            return response()->json([
+                'message' => 'You cannot assign a role at or above your own level.',
+            ], 403);
+        }
 
         $invitation = TeamInvitation::create([
             'campaign_id' => $campaign->id,
@@ -133,6 +145,17 @@ class TeamController extends Controller
         ]);
 
         if (isset($validated['role'])) {
+            // Prevent role escalation
+            $assignerRole = $request->user()->hasRole('platform-owner')
+                ? 'platform-owner'
+                : $request->user()->campaignRole($campaign);
+
+            if (!$assignerRole || !RoleHierarchy::canAssign($assignerRole, $validated['role'])) {
+                return response()->json([
+                    'message' => 'You cannot assign a role at or above your own level.',
+                ], 403);
+            }
+
             // Update campaign-scoped role on the pivot
             $member->update(['role' => $validated['role']]);
             // Keep global role assignment for backward compatibility
