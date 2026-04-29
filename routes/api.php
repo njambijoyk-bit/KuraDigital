@@ -4,8 +4,16 @@ use App\Http\Controllers\Api\SiteController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CampaignController;
+use App\Http\Controllers\Api\V1\ContactMessageController;
+use App\Http\Controllers\Api\V1\EventController;
+use App\Http\Controllers\Api\V1\GalleryController;
+use App\Http\Controllers\Api\V1\ManifestoController;
 use App\Http\Controllers\Api\V1\MediaController;
+use App\Http\Controllers\Api\V1\NewsController;
+use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\SiteSettingsController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\VolunteerController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -81,6 +89,63 @@ Route::prefix('v1')->group(function () {
             // Audit logs
             Route::get('/audit-logs', [AuditLogController::class, 'index']);
             Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show']);
+
+            // --- Phase 1B: Content Management ---
+
+            // Site settings
+            Route::get('/site', [SiteSettingsController::class, 'show']);
+            Route::post('/site', [SiteSettingsController::class, 'store']);
+            Route::put('/site', [SiteSettingsController::class, 'update']);
+            Route::delete('/site', [SiteSettingsController::class, 'destroy']);
+
+            // Manifesto
+            Route::get('/manifesto', [ManifestoController::class, 'index']);
+            Route::post('/manifesto', [ManifestoController::class, 'store']);
+            Route::get('/manifesto/{pillar}', [ManifestoController::class, 'show']);
+            Route::put('/manifesto/{pillar}', [ManifestoController::class, 'update']);
+            Route::delete('/manifesto/{pillar}', [ManifestoController::class, 'destroy']);
+
+            // Events
+            Route::get('/events', [EventController::class, 'index']);
+            Route::post('/events', [EventController::class, 'store']);
+            Route::get('/events/{event}', [EventController::class, 'show']);
+            Route::put('/events/{event}', [EventController::class, 'update']);
+            Route::delete('/events/{event}', [EventController::class, 'destroy']);
+
+            // News
+            Route::get('/news', [NewsController::class, 'index']);
+            Route::post('/news', [NewsController::class, 'store']);
+            Route::get('/news/{article}', [NewsController::class, 'show']);
+            Route::put('/news/{article}', [NewsController::class, 'update']);
+            Route::delete('/news/{article}', [NewsController::class, 'destroy']);
+
+            // Gallery
+            Route::get('/gallery', [GalleryController::class, 'index']);
+            Route::post('/gallery', [GalleryController::class, 'store']);
+            Route::get('/gallery/{item}', [GalleryController::class, 'show']);
+            Route::put('/gallery/{item}', [GalleryController::class, 'update']);
+            Route::delete('/gallery/{item}', [GalleryController::class, 'destroy']);
+
+            // Projects
+            Route::get('/projects', [ProjectController::class, 'index']);
+            Route::post('/projects', [ProjectController::class, 'store']);
+            Route::get('/projects/{project}', [ProjectController::class, 'show']);
+            Route::put('/projects/{project}', [ProjectController::class, 'update']);
+            Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
+
+            // Volunteers
+            Route::get('/volunteers', [VolunteerController::class, 'index']);
+            Route::get('/volunteers/export', [VolunteerController::class, 'export']);
+            Route::get('/volunteers/{volunteer}', [VolunteerController::class, 'show']);
+            Route::put('/volunteers/{volunteer}', [VolunteerController::class, 'update']);
+            Route::delete('/volunteers/{volunteer}', [VolunteerController::class, 'destroy']);
+
+            // Contact messages
+            Route::get('/contacts', [ContactMessageController::class, 'index']);
+            Route::get('/contacts/export', [ContactMessageController::class, 'export']);
+            Route::get('/contacts/{message}', [ContactMessageController::class, 'show']);
+            Route::put('/contacts/{message}', [ContactMessageController::class, 'update']);
+            Route::delete('/contacts/{message}', [ContactMessageController::class, 'destroy']);
         });
     });
 });
