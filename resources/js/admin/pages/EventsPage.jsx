@@ -6,7 +6,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 
-const emptyForm = { title: '', title_sw: '', description: '', description_sw: '', location: '', event_date: '', event_time: '', is_published: true };
+const emptyForm = { title: '', title_sw: '', description: '', description_sw: '', location: '', date: '', time: '', is_published: true };
 
 export default function EventsPage() {
     const { campaignId } = useParams();
@@ -36,8 +36,8 @@ export default function EventsPage() {
         setForm({
             title: item.title || '', title_sw: item.title_sw || '',
             description: item.description || '', description_sw: item.description_sw || '',
-            location: item.location || '', event_date: item.event_date?.split('T')[0] || '',
-            event_time: item.event_time || '', is_published: item.is_published ?? true,
+            location: item.location || '', date: item.date?.split('T')[0] || '',
+            time: item.time || '', is_published: item.is_published ?? true,
         });
         setError(null); setShowForm(true);
     };
@@ -68,7 +68,7 @@ export default function EventsPage() {
     const columns = [
         { key: 'title', label: 'Event', render: (r) => <span className="font-medium text-gray-900">{r.title}</span> },
         { key: 'location', label: 'Location', render: (r) => <span className="text-gray-500">{r.location || '—'}</span> },
-        { key: 'event_date', label: 'Date', render: (r) => r.event_date ? new Date(r.event_date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+        { key: 'date', label: 'Date', render: (r) => r.date ? new Date(r.date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
         { key: 'is_published', label: 'Status', render: (r) => (
             <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${r.is_published ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                 {r.is_published ? 'Published' : 'Draft'}
@@ -127,11 +127,11 @@ export default function EventsPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                            <input type="date" value={form.event_date} onChange={(e) => setForm((f) => ({ ...f, event_date: e.target.value }))} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
+                            <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} required className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                            <input type="time" value={form.event_time} onChange={(e) => setForm((f) => ({ ...f, event_time: e.target.value }))} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
+                            <input type="time" value={form.time} onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">

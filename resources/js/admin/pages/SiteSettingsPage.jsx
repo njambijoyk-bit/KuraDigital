@@ -10,11 +10,11 @@ export default function SiteSettingsPage() {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
     const [form, setForm] = useState({
-        candidate_name: '', slug: '', tagline: '', tagline_sw: '',
-        biography: '', biography_sw: '', primary_color: '#16a34a',
-        secondary_color: '#f97316', logo_url: '', banner_url: '',
+        candidate_name: '', slug: '', slogan: '', slogan_sw: '',
+        bio_summary: '', bio_summary_sw: '', primary_color: '#16a34a',
+        secondary_color: '#f97316', logo_url: '', hero_image_url: '',
         facebook_url: '', twitter_url: '', instagram_url: '', youtube_url: '',
-        tiktok_url: '', whatsapp_number: '', phone_number: '', email: '',
+        tiktok_url: '', phone: '', email: '',
     });
 
     useEffect(() => {
@@ -27,21 +27,20 @@ export default function SiteSettingsPage() {
                 setForm({
                     candidate_name: s.candidate_name || '',
                     slug: s.slug || '',
-                    tagline: s.tagline || '',
-                    tagline_sw: s.tagline_sw || '',
-                    biography: s.biography || '',
-                    biography_sw: s.biography_sw || '',
+                    slogan: s.slogan || '',
+                    slogan_sw: s.slogan_sw || '',
+                    bio_summary: s.bio_summary || '',
+                    bio_summary_sw: s.bio_summary_sw || '',
                     primary_color: s.primary_color || '#16a34a',
                     secondary_color: s.secondary_color || '#f97316',
                     logo_url: s.logo_url || '',
-                    banner_url: s.banner_url || '',
+                    hero_image_url: s.hero_image_url || '',
                     facebook_url: s.facebook_url || '',
                     twitter_url: s.twitter_url || '',
                     instagram_url: s.instagram_url || '',
                     youtube_url: s.youtube_url || '',
                     tiktok_url: s.tiktok_url || '',
-                    whatsapp_number: s.whatsapp_number || '',
-                    phone_number: s.phone_number || '',
+                    phone: s.phone || '',
                     email: s.email || '',
                 });
             } catch (err) {
@@ -117,21 +116,21 @@ export default function SiteSettingsPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tagline (English)</label>
-                                <input type="text" value={form.tagline} onChange={update('tagline')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Slogan (English)</label>
+                                <input type="text" value={form.slogan} onChange={update('slogan')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tagline (Swahili)</label>
-                                <input type="text" value={form.tagline_sw} onChange={update('tagline_sw')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Slogan (Swahili)</label>
+                                <input type="text" value={form.slogan_sw} onChange={update('slogan_sw')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Biography (English)</label>
-                            <textarea value={form.biography} onChange={update('biography')} rows={3} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Bio Summary (English)</label>
+                            <textarea value={form.bio_summary} onChange={update('bio_summary')} rows={3} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Biography (Swahili)</label>
-                            <textarea value={form.biography_sw} onChange={update('biography_sw')} rows={3} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Bio Summary (Swahili)</label>
+                            <textarea value={form.bio_summary_sw} onChange={update('bio_summary_sw')} rows={3} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
                         </div>
                     </div>
                 </div>
@@ -162,8 +161,8 @@ export default function SiteSettingsPage() {
                                 <input type="url" value={form.logo_url} onChange={update('logo_url')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Banner URL</label>
-                                <input type="url" value={form.banner_url} onChange={update('banner_url')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Hero Image URL</label>
+                                <input type="url" value={form.hero_image_url} onChange={update('hero_image_url')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm" />
                             </div>
                         </div>
                     </div>
@@ -173,18 +172,14 @@ export default function SiteSettingsPage() {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                     <h3 className="font-heading font-semibold text-gray-900 mb-4">Contact & Social Media</h3>
                     <div className="space-y-4">
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                                 <input type="email" value={form.email} onChange={update('email')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                <input type="tel" value={form.phone_number} onChange={update('phone_number')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-                                <input type="tel" value={form.whatsapp_number} onChange={update('whatsapp_number')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm" />
+                                <input type="tel" value={form.phone} onChange={update('phone')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
