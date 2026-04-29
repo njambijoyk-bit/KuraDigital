@@ -13,6 +13,8 @@ class VolunteerController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [Volunteer::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -50,6 +52,8 @@ class VolunteerController extends Controller
 
     public function show(Campaign $campaign, Volunteer $volunteer): JsonResponse
     {
+        $this->authorize('view', [Volunteer::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $volunteer)) {
             return response()->json(['message' => 'Volunteer not found.'], 404);
         }
@@ -59,6 +63,8 @@ class VolunteerController extends Controller
 
     public function update(Request $request, Campaign $campaign, Volunteer $volunteer): JsonResponse
     {
+        $this->authorize('update', [Volunteer::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $volunteer)) {
             return response()->json(['message' => 'Volunteer not found.'], 404);
         }
@@ -86,6 +92,8 @@ class VolunteerController extends Controller
 
     public function destroy(Campaign $campaign, Volunteer $volunteer): JsonResponse
     {
+        $this->authorize('delete', [Volunteer::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $volunteer)) {
             return response()->json(['message' => 'Volunteer not found.'], 404);
         }
@@ -97,6 +105,8 @@ class VolunteerController extends Controller
 
     public function export(Request $request, Campaign $campaign): StreamedResponse
     {
+        $this->authorize('export', [Volunteer::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {

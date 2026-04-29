@@ -12,6 +12,8 @@ class NewsController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [NewsArticle::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -44,6 +46,8 @@ class NewsController extends Controller
 
     public function store(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('create', [NewsArticle::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -76,6 +80,8 @@ class NewsController extends Controller
 
     public function show(Campaign $campaign, NewsArticle $article): JsonResponse
     {
+        $this->authorize('viewAny', [NewsArticle::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $article)) {
             return response()->json(['message' => 'Article not found.'], 404);
         }
@@ -85,6 +91,8 @@ class NewsController extends Controller
 
     public function update(Request $request, Campaign $campaign, NewsArticle $article): JsonResponse
     {
+        $this->authorize('update', [NewsArticle::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $article)) {
             return response()->json(['message' => 'Article not found.'], 404);
         }
@@ -113,6 +121,8 @@ class NewsController extends Controller
 
     public function destroy(Campaign $campaign, NewsArticle $article): JsonResponse
     {
+        $this->authorize('delete', [NewsArticle::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $article)) {
             return response()->json(['message' => 'Article not found.'], 404);
         }

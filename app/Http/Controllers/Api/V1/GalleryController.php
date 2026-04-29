@@ -12,6 +12,8 @@ class GalleryController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [GalleryItem::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -35,6 +37,8 @@ class GalleryController extends Controller
 
     public function store(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('create', [GalleryItem::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -62,6 +66,8 @@ class GalleryController extends Controller
 
     public function show(Campaign $campaign, GalleryItem $item): JsonResponse
     {
+        $this->authorize('viewAny', [GalleryItem::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $item)) {
             return response()->json(['message' => 'Gallery item not found.'], 404);
         }
@@ -71,6 +77,8 @@ class GalleryController extends Controller
 
     public function update(Request $request, Campaign $campaign, GalleryItem $item): JsonResponse
     {
+        $this->authorize('update', [GalleryItem::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $item)) {
             return response()->json(['message' => 'Gallery item not found.'], 404);
         }
@@ -93,6 +101,8 @@ class GalleryController extends Controller
 
     public function destroy(Campaign $campaign, GalleryItem $item): JsonResponse
     {
+        $this->authorize('delete', [GalleryItem::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $item)) {
             return response()->json(['message' => 'Gallery item not found.'], 404);
         }
