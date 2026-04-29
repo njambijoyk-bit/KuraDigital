@@ -179,7 +179,9 @@ class OpponentController extends Controller
         // ABAC: filter research by user's clearance level
         $user = $request->user();
         if (!$user->hasClearance('top_secret')) {
-            if (!$user->hasClearance('confidential')) {
+            if ($user->hasClearance('confidential')) {
+                $query->whereNotIn('clearance', ['restricted']);
+            } else {
                 $query->whereNotIn('clearance', ['confidential', 'restricted']);
             }
         }
