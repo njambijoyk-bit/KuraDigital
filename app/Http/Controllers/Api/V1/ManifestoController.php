@@ -44,6 +44,10 @@ class ManifestoController extends Controller
 
         $validated['site_id'] = $site->id;
 
+        if (empty($validated['icon'] ?? null)) {
+            $validated['icon'] = '📋';
+        }
+
         $pillar = ManifestoPillar::create($validated);
 
         return response()->json([
