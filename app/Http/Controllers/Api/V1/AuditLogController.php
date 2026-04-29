@@ -39,15 +39,46 @@ class AuditLogController extends Controller
 
         $logs = $query->orderByDesc('created_at')->paginate(50);
 
+        // ABAC: redact sensitive audit data for users without sufficient clearance
+        $user = $request->user();
+        if (!$user->hasClearance('confidential')) {
+            $logs->getCollection()->transform(function ($log) use ($user) {
+                $sensitiveTypes = [
+                    'App\Models\OpponentResearch',
+                    'App\Models\Media',
+                ];
+
+                if (in_array($log->auditable_type, $sensitiveTypes)) {
+                    if (!$user->hasClearance('internal')) {
+                        $log->old_values = '[REDACTED — insufficient clearance]';
+                        $log->new_values = '[REDACTED — insufficient clearance]';
+                    }
+                }
+
+                return $log;
+            });
+        }
+
         return response()->json($logs);
     }
 
-    public function show(Campaign $campaign, AuditLog $auditLog): JsonResponse
+    public function show(Request $request, Campaign $campaign, AuditLog $auditLog): JsonResponse
     {
         $this->authorize('viewAny', [AuditLog::class, $campaign]);
 
         if ($auditLog->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Audit log not found.'], 404);
+        }
+
+        $user = $request->user();
+        $sensitiveTypes = [
+            'App\Models\OpponentResearch',
+            'App\Models\Media',
+        ];
+
+        if (in_array($auditLog->auditable_type, $sensitiveTypes) && !$user->hasClearance('internal')) {
+            $auditLog->old_values = '[REDACTED — insufficient clearance]';
+            $auditLog->new_values = '[REDACTED — insufficient clearance]';
         }
 
         return response()->json([
