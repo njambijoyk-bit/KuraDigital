@@ -38,10 +38,10 @@ Route::post('/sites/{siteId}/volunteers', [SiteController::class, 'storeVoluntee
 */
 Route::prefix('v1')->group(function () {
 
-    // Auth (public)
-    Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::post('/auth/verify-mfa', [AuthController::class, 'verifyMfa']);
+    // Auth (public, rate-limited)
+    Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:auth-register');
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
+    Route::post('/auth/verify-mfa', [AuthController::class, 'verifyMfa'])->middleware('throttle:auth-mfa');
 
     // Accept invitation (authenticated but no campaign context)
     Route::middleware(['auth:sanctum', 'account.active'])->group(function () {
