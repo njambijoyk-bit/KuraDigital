@@ -12,6 +12,8 @@ class AuditLogController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [AuditLog::class, $campaign]);
+
         $query = AuditLog::where('campaign_id', $campaign->id)
             ->with('user:id,name,email');
 
@@ -42,6 +44,8 @@ class AuditLogController extends Controller
 
     public function show(Campaign $campaign, AuditLog $auditLog): JsonResponse
     {
+        $this->authorize('viewAny', [AuditLog::class, $campaign]);
+
         if ($auditLog->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Audit log not found.'], 404);
         }

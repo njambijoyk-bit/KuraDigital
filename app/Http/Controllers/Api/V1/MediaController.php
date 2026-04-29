@@ -14,6 +14,8 @@ class MediaController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [Media::class, $campaign]);
+
         $query = $campaign->media();
 
         if ($request->has('collection')) {
@@ -39,6 +41,8 @@ class MediaController extends Controller
 
     public function store(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('create', [Media::class, $campaign]);
+
         $validated = $request->validate([
             'file' => ['required', 'file', 'max:10240'], // 10MB max
             'alt_text' => ['nullable', 'string', 'max:255'],
@@ -76,6 +80,8 @@ class MediaController extends Controller
 
     public function show(Campaign $campaign, Media $media): JsonResponse
     {
+        $this->authorize('view', $media);
+
         if ($media->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Media not found.'], 404);
         }
@@ -85,6 +91,8 @@ class MediaController extends Controller
 
     public function update(Request $request, Campaign $campaign, Media $media): JsonResponse
     {
+        $this->authorize('update', $media);
+
         if ($media->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Media not found.'], 404);
         }
@@ -106,6 +114,8 @@ class MediaController extends Controller
 
     public function destroy(Campaign $campaign, Media $media): JsonResponse
     {
+        $this->authorize('delete', $media);
+
         if ($media->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Media not found.'], 404);
         }

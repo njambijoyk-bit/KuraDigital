@@ -11,6 +11,7 @@ use App\Models\GalleryItem;
 use App\Models\ManifestoPillar;
 use App\Models\Media;
 use App\Models\NewsArticle;
+use App\Models\Opponent;
 use App\Models\Project;
 use App\Models\Site;
 use App\Models\Volunteer;
@@ -23,6 +24,7 @@ use App\Policies\GalleryItemPolicy;
 use App\Policies\ManifestoPillarPolicy;
 use App\Policies\MediaPolicy;
 use App\Policies\NewsArticlePolicy;
+use App\Policies\OpponentPolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\SitePolicy;
 use App\Policies\VolunteerPolicy;
@@ -43,6 +45,7 @@ class AuthServiceProvider extends ServiceProvider
         Project::class => ProjectPolicy::class,
         Volunteer::class => VolunteerPolicy::class,
         ContactMessage::class => ContactMessagePolicy::class,
+        Opponent::class => OpponentPolicy::class,
     ];
 
     public function boot(): void

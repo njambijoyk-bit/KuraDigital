@@ -12,6 +12,8 @@ class ManifestoController extends Controller
 {
     public function index(Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [ManifestoPillar::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -25,6 +27,8 @@ class ManifestoController extends Controller
 
     public function store(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('create', [ManifestoPillar::class, $campaign]);
+
         $site = $campaign->site;
 
         if (!$site) {
@@ -58,6 +62,8 @@ class ManifestoController extends Controller
 
     public function show(Campaign $campaign, ManifestoPillar $pillar): JsonResponse
     {
+        $this->authorize('viewAny', [ManifestoPillar::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $pillar)) {
             return response()->json(['message' => 'Pillar not found.'], 404);
         }
@@ -67,6 +73,8 @@ class ManifestoController extends Controller
 
     public function update(Request $request, Campaign $campaign, ManifestoPillar $pillar): JsonResponse
     {
+        $this->authorize('update', [ManifestoPillar::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $pillar)) {
             return response()->json(['message' => 'Pillar not found.'], 404);
         }
@@ -92,6 +100,8 @@ class ManifestoController extends Controller
 
     public function destroy(Campaign $campaign, ManifestoPillar $pillar): JsonResponse
     {
+        $this->authorize('delete', [ManifestoPillar::class, $campaign]);
+
         if (!$this->belongsToCampaign($campaign, $pillar)) {
             return response()->json(['message' => 'Pillar not found.'], 404);
         }

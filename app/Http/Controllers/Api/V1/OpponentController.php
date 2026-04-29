@@ -13,6 +13,8 @@ class OpponentController extends Controller
 {
     public function index(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [Opponent::class, $campaign]);
+
         $query = $campaign->opponents();
 
         if ($request->has('threat_level')) {
@@ -37,7 +39,7 @@ class OpponentController extends Controller
         }
 
         $opponents = $query->withCount('research')
-            ->orderByRaw("FIELD(threat_level, 'critical', 'high', 'medium', 'low')")
+            ->orderByRaw("CASE threat_level WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END")
             ->paginate(20);
 
         return response()->json($opponents);
@@ -45,6 +47,8 @@ class OpponentController extends Controller
 
     public function store(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('create', [Opponent::class, $campaign]);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'party' => ['nullable', 'string', 'max:255'],
@@ -73,6 +77,8 @@ class OpponentController extends Controller
 
     public function show(Campaign $campaign, Opponent $opponent): JsonResponse
     {
+        $this->authorize('viewAny', [Opponent::class, $campaign]);
+
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
         }
@@ -84,6 +90,8 @@ class OpponentController extends Controller
 
     public function update(Request $request, Campaign $campaign, Opponent $opponent): JsonResponse
     {
+        $this->authorize('update', [Opponent::class, $campaign]);
+
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
         }
@@ -115,6 +123,8 @@ class OpponentController extends Controller
 
     public function destroy(Campaign $campaign, Opponent $opponent): JsonResponse
     {
+        $this->authorize('delete', [Opponent::class, $campaign]);
+
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
         }
@@ -128,6 +138,8 @@ class OpponentController extends Controller
 
     public function researchIndex(Request $request, Campaign $campaign, Opponent $opponent): JsonResponse
     {
+        $this->authorize('viewResearch', [Opponent::class, $campaign]);
+
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
         }
@@ -149,6 +161,8 @@ class OpponentController extends Controller
 
     public function researchStore(Request $request, Campaign $campaign, Opponent $opponent): JsonResponse
     {
+        $this->authorize('addResearch', [Opponent::class, $campaign]);
+
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
         }
@@ -164,6 +178,11 @@ class OpponentController extends Controller
         $validated['opponent_id'] = $opponent->id;
         $validated['created_by'] = $request->user()->id;
 
+        $clearance = $validated['clearance'] ?? 'internal';
+        if (in_array($clearance, ['confidential', 'restricted']) && !$request->user()->can('opponents.view-confidential')) {
+            return response()->json(['message' => 'You do not have permission to create research at this clearance level.'], 403);
+        }
+
         $research = OpponentResearch::create($validated);
         $research->load('author:id,name');
 
@@ -175,6 +194,8 @@ class OpponentController extends Controller
 
     public function researchUpdate(Request $request, Campaign $campaign, Opponent $opponent, OpponentResearch $research): JsonResponse
     {
+        $this->authorize('editResearch', [Opponent::class, $campaign]);
+
         if ($opponent->campaign_id !== $campaign->id || $research->opponent_id !== $opponent->id) {
             return response()->json(['message' => 'Research not found.'], 404);
         }
@@ -187,6 +208,10 @@ class OpponentController extends Controller
             'date_observed' => ['sometimes', 'nullable', 'date'],
         ]);
 
+        if (isset($validated['clearance']) && in_array($validated['clearance'], ['confidential', 'restricted']) && !$request->user()->can('opponents.view-confidential')) {
+            return response()->json(['message' => 'You do not have permission to set this clearance level.'], 403);
+        }
+
         $research->update($validated);
 
         return response()->json([
@@ -195,8 +220,10 @@ class OpponentController extends Controller
         ]);
     }
 
-    public function researchDestroy(Campaign $campaign, Opponent $opponent, OpponentResearch $research): JsonResponse
+    public function researchDestroy(Request $request, Campaign $campaign, Opponent $opponent, OpponentResearch $research): JsonResponse
     {
+        $this->authorize('deleteResearch', [Opponent::class, $campaign]);
+
         if ($opponent->campaign_id !== $campaign->id || $research->opponent_id !== $opponent->id) {
             return response()->json(['message' => 'Research not found.'], 404);
         }

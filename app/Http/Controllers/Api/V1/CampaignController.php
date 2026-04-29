@@ -31,6 +31,8 @@ class CampaignController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Campaign::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'unique:campaigns'],
@@ -65,6 +67,8 @@ class CampaignController extends Controller
 
     public function show(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('view', $campaign);
+
         $campaign->load(['parent', 'children', 'site']);
         $campaign->loadCount(['activeMembers', 'children']);
 
@@ -73,6 +77,8 @@ class CampaignController extends Controller
 
     public function update(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('update', $campaign);
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'level' => ['sometimes', 'in:national,county,constituency,ward'],
@@ -97,6 +103,8 @@ class CampaignController extends Controller
 
     public function destroy(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('delete', $campaign);
+
         $campaign->delete();
 
         return response()->json(['message' => 'Campaign deleted.']);
@@ -114,6 +122,8 @@ class CampaignController extends Controller
 
     public function children(Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewChildren', $campaign);
+
         $children = $campaign->children()
             ->withCount('activeMembers')
             ->get();

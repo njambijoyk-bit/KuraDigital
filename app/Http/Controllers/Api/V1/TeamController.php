@@ -15,6 +15,8 @@ class TeamController extends Controller
 {
     public function members(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [CampaignMember::class, $campaign]);
+
         $members = $campaign->members()
             ->with(['user' => fn ($q) => $q->select('id', 'name', 'email', 'phone', 'account_status')])
             ->with(['user.roles'])
@@ -25,6 +27,8 @@ class TeamController extends Controller
 
     public function invite(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('invite', [CampaignMember::class, $campaign]);
+
         $validated = $request->validate([
             'email' => ['required_without:phone', 'nullable', 'email'],
             'phone' => ['required_without:email', 'nullable', 'string', 'max:20'],
@@ -108,6 +112,8 @@ class TeamController extends Controller
 
     public function updateMember(Request $request, Campaign $campaign, CampaignMember $member): JsonResponse
     {
+        $this->authorize('update', $member);
+
         if ($member->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Member not in this campaign.'], 404);
         }
@@ -140,6 +146,8 @@ class TeamController extends Controller
 
     public function deactivateMember(Request $request, Campaign $campaign, CampaignMember $member): JsonResponse
     {
+        $this->authorize('deactivate', $member);
+
         if ($member->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Member not in this campaign.'], 404);
         }
@@ -155,6 +163,8 @@ class TeamController extends Controller
 
     public function pendingInvitations(Request $request, Campaign $campaign): JsonResponse
     {
+        $this->authorize('viewAny', [CampaignMember::class, $campaign]);
+
         $invitations = $campaign->invitations()
             ->where('status', 'pending')
             ->where('expires_at', '>', now())
@@ -166,6 +176,8 @@ class TeamController extends Controller
 
     public function revokeInvitation(Request $request, Campaign $campaign, TeamInvitation $invitation): JsonResponse
     {
+        $this->authorize('invite', [CampaignMember::class, $campaign]);
+
         if ($invitation->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Invitation not in this campaign.'], 404);
         }
