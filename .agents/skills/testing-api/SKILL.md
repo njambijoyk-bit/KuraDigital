@@ -54,6 +54,9 @@ curl -s http://127.0.0.1:8000/api/v1/auth/me \
   -H "Authorization: Bearer {token}"
 ```
 
+### Campaign Creation
+When creating a campaign, `election_type` must be one of: `presidential`, `gubernatorial`, `senatorial`, `woman_rep`, `parliamentary`, `mca`, `other`. The `level` must be: `national`, `county`, `constituency`, or `ward`.
+
 ### Campaign-Scoped Routes
 Routes under `/api/v1/campaigns/{campaign}/...` require the authenticated user to be a member of the campaign. Creating a campaign auto-adds the creator as `campaign-owner`.
 
@@ -66,6 +69,19 @@ To test tenant isolation, register two separate users. User A creates a campaign
 3. User B: `POST /invitations/accept` with `{token}`
 4. User B can now access campaign-scoped routes
 
+### ABAC / Clearance-Level Testing
+Some features (e.g., opponent research) use clearance levels (`public`, `internal`, `confidential`, `restricted`). To test ABAC:
+1. Create resources at different clearance levels as `campaign-owner` (has all permissions)
+2. Invite a lower-privilege role (e.g., `research-officer`) — they lack `opponents.view-confidential`
+3. Verify the lower role cannot see/create confidential/restricted items (expect 403)
+4. Verify the lower role CAN see/create public/internal items (expect 200/201)
+
+### Nested Resource Testing
+For resources nested under others (e.g., `/opponents/{id}/research/{id}`), always verify:
+- Ownership checks: resource must belong to the specified parent (expect 404 if mismatched)
+- Cascade deletes: deleting a parent removes all children (verify via overview/list endpoints)
+- Cross-resource endpoints (e.g., `/opponents/research/recent`) return data across all parents
+
 ### Media Upload
 Use `multipart/form-data` (not JSON) for file uploads:
 ```bash
@@ -77,11 +93,19 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/campaigns/{id}/media \
   -F "tags[]=tag1"
 ```
 
+## Response Format Notes
+
+- **Audit logs** use Laravel pagination: top-level keys are `current_page`, `data`, `total`, etc. The actual log entries are in the `data` array, not `audit_logs`.
+- **SWOT entries** are returned grouped by type: `{swot: {strengths: [], weaknesses: [], opportunities: [], threats: []}, total: N}`
+- **Content endpoints** (manifesto, events, news, etc.) require a site to exist first — create one via `POST /campaigns/{id}/site` before testing content CRUD.
+
 ## Known Issues
 
-- **Audit log `campaign_id` NULL for Campaign model**: The `Auditable` trait resolves `campaign_id` via `$model->campaign_id`, but the Campaign model doesn't have this attribute (it IS the campaign). The Campaign model might need a `getAuditCampaignId()` method returning `$this->id`. Check if this has been fixed before testing audit logs.
+- **Audit log `campaign_id` for Campaign model**: Fixed — Campaign model has `getAuditCampaignId()` returning `$this->id`. All models with `Auditable` trait should have this method if they don't have a direct `campaign_id` column.
 - **Vite manifest error on non-API routes**: The frontend build might not exist locally. This only affects non-API routes. API routes work fine with `Accept: application/json`.
 - **MFA in dev**: MFA verification accepts any 6-digit code in non-production environments.
+- **Enum sort order in SQLite**: `ORDER BY enum_column DESC` sorts alphabetically, not by logical severity. For example, `threat_level` sorts as `low > high > critical` instead of `critical > high > medium > low`. This might be fixed in the future with a CASE WHEN or numeric column.
+- **Frontend field name alignment**: Frontend forms may use different field names than the API expects. When testing content forms (events, site settings, manifesto), verify field names match the controller's validation rules.
 
 ## Password Requirements
 - Minimum 8 characters
@@ -90,7 +114,13 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/campaigns/{id}/media \
 - Must include `password_confirmation` field
 
 ## Roles Available for Testing
-Common roles: `platform-owner`, `campaign-owner`, `campaign-director`, `field-coordinator`, `content-editor`, `volunteer`, `polling-station-agent`. Full list of 26 roles in `database/seeders/RolesAndPermissionsSeeder.php`.
+Common roles: `platform-owner`, `campaign-owner`, `campaign-director`, `strategy-director`, `research-officer`, `field-coordinator`, `content-editor`, `volunteer`, `polling-station-agent`. Full list of 26 roles in `database/seeders/RolesAndPermissionsSeeder.php`.
+
+### Role Permissions for Opponent Intelligence
+- `campaign-owner` / `campaign-director` / `deputy-campaign-director`: All 9 opponent permissions including `opponents.view-confidential`
+- `strategy-director`: All except `opponents.delete` and `opponents.delete-research`
+- `research-officer`: `opponents.view`, `opponents.create`, `opponents.edit`, `opponents.view-research`, `opponents.add-research`, `opponents.edit-research` (NO `view-confidential`)
+- `legal-compliance-officer`: `opponents.view-research` only
 
 ## Devin Secrets Needed
 No secrets required for local API testing. Future phases may need:
