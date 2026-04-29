@@ -12,6 +12,7 @@ import VolunteerPage from './pages/VolunteerPage';
 import ProjectsPage from './pages/ProjectsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import useSiteStore from './stores/useSiteStore';
+import AdminApp from './admin/AdminApp';
 
 function SiteWrapper() {
     const { slug } = useParams();
@@ -64,6 +65,7 @@ function SiteWrapper() {
 export default function App() {
     return (
         <Routes>
+            <Route path="/admin/*" element={<AdminApp />} />
             <Route path="/:slug/*" element={<SiteWrapper />} />
             <Route path="*" element={<NotFoundPage />} />
         </Routes>
