@@ -11,7 +11,7 @@ import useAuthStore from '../stores/useAuthStore';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 
-const CAMPAIGN_TYPES = ['presidential', 'governor', 'senator', 'woman_rep', 'mp', 'mca'];
+const CAMPAIGN_TYPES = ['presidential', 'gubernatorial', 'senatorial', 'woman_rep', 'parliamentary', 'mca'];
 const LEVELS = ['national', 'county', 'constituency', 'ward'];
 
 export default function CampaignsPage() {
@@ -20,7 +20,7 @@ export default function CampaignsPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [creating, setCreating] = useState(false);
     const [form, setForm] = useState({
-        name: '', type: 'mp', level: 'constituency', county: '', constituency: '', ward: '', description: '',
+        name: '', election_type: 'parliamentary', level: 'constituency', county: '', constituency: '', ward: '', description: '',
     });
     const [formError, setFormError] = useState(null);
     const user = useAuthStore((s) => s.user);
@@ -47,8 +47,8 @@ export default function CampaignsPage() {
         try {
             const { data } = await api.post('/campaigns', form);
             setShowCreate(false);
-            setForm({ name: '', type: 'mp', level: 'constituency', county: '', constituency: '', ward: '', description: '' });
-            navigate(`/admin/campaigns/${data.data.id}`);
+            setForm({ name: '', election_type: 'parliamentary', level: 'constituency', county: '', constituency: '', ward: '', description: '' });
+            navigate(`/admin/campaigns/${data.campaign.id}`);
         } catch (err) {
             setFormError(
                 err.response?.data?.errors
@@ -131,7 +131,7 @@ export default function CampaignsPage() {
                                             {c.name}
                                         </h3>
                                         <span className="inline-block mt-1 px-2 py-0.5 bg-primary-50 text-primary-700 text-xs font-medium rounded-full capitalize">
-                                            {c.type?.replace('_', ' ')}
+                                            {c.election_type?.replace('_', ' ')}
                                         </span>
                                     </div>
                                 </div>
@@ -172,7 +172,7 @@ export default function CampaignsPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                            <select value={form.type} onChange={update('type')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            <select value={form.election_type} onChange={update('election_type')} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                                 {CAMPAIGN_TYPES.map((t) => (
                                     <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>
                                 ))}

@@ -15,8 +15,8 @@ const useAuthStore = create((set, get) => ({
         set({ loading: true, error: null });
         try {
             const { data } = await api.post('/auth/login', { email, password });
-            const token = data.data.token;
-            const user = data.data.user;
+            const token = data.token;
+            const user = data.user;
             localStorage.setItem('kura_token', token);
             localStorage.setItem('kura_user', JSON.stringify(user));
             set({ token, user, loading: false });
@@ -32,8 +32,8 @@ const useAuthStore = create((set, get) => ({
         set({ loading: true, error: null });
         try {
             const { data } = await api.post('/auth/register', payload);
-            const token = data.data.token;
-            const user = data.data.user;
+            const token = data.token;
+            const user = data.user;
             localStorage.setItem('kura_token', token);
             localStorage.setItem('kura_user', JSON.stringify(user));
             set({ token, user, loading: false });
@@ -61,7 +61,7 @@ const useAuthStore = create((set, get) => ({
     fetchMe: async () => {
         try {
             const { data } = await api.get('/auth/me');
-            const user = data.data;
+            const user = data.user;
             localStorage.setItem('kura_user', JSON.stringify(user));
             set({ user });
         } catch {

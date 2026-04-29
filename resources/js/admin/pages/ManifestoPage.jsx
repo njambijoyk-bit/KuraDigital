@@ -22,7 +22,7 @@ export default function ManifestoPage() {
         setLoading(true);
         try {
             const { data } = await api.get(`/campaigns/${campaignId}/manifesto`);
-            setItems(data.data || []);
+            setItems(data.pillars || data.data || []);
         } catch { /* handled */ }
         setLoading(false);
     };

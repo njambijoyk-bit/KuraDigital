@@ -34,8 +34,9 @@ export default function ContactsPage() {
     const openDetail = async (item) => {
         try {
             const { data } = await api.get(`/campaigns/${campaignId}/contacts/${item.id}`);
-            setShowDetail(data.data);
-            setResponse(data.data.response || '');
+            const contact = data.message || data.data;
+            setShowDetail(contact);
+            setResponse(contact?.response || '');
         } catch {
             setShowDetail(item);
             setResponse(item.response || '');

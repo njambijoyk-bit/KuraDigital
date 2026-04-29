@@ -36,11 +36,11 @@ export default function DashboardPage() {
                         api.get(`/campaigns/${campaignId}/audit-logs`),
                     ]);
 
-                if (campRes.status === 'fulfilled') setCampaign(campRes.value.data.data);
+                if (campRes.status === 'fulfilled') setCampaign(campRes.value.data.campaign);
 
                 setStats({
                     members: membersRes.status === 'fulfilled' ? (membersRes.value.data.data?.length || 0) : 0,
-                    manifesto: manifestoRes.status === 'fulfilled' ? (manifestoRes.value.data.data?.length || 0) : 0,
+                    manifesto: manifestoRes.status === 'fulfilled' ? (manifestoRes.value.data.pillars?.length || manifestoRes.value.data.data?.length || 0) : 0,
                     events: eventsRes.status === 'fulfilled' ? (eventsRes.value.data.data?.length || 0) : 0,
                     news: newsRes.status === 'fulfilled' ? (newsRes.value.data.data?.length || 0) : 0,
                     volunteers: volunteersRes.status === 'fulfilled' ? (volunteersRes.value.data.meta?.total || volunteersRes.value.data.data?.length || 0) : 0,
@@ -73,7 +73,7 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-heading font-bold text-gray-900">{campaign?.name}</h2>
                 <div className="flex flex-wrap gap-2 mt-2">
                     <span className="px-2.5 py-0.5 bg-primary-50 text-primary-700 text-xs font-medium rounded-full capitalize">
-                        {campaign?.type?.replace('_', ' ')}
+                        {campaign?.election_type?.replace('_', ' ')}
                     </span>
                     <span className="px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full capitalize">
                         {campaign?.level}

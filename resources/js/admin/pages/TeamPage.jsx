@@ -44,7 +44,7 @@ export default function TeamPage() {
                 api.get(`/campaigns/${campaignId}/invitations`),
             ]);
             setMembers(mRes.data.data || []);
-            setInvitations(iRes.data.data || []);
+            setInvitations(iRes.data.invitations || iRes.data.data || []);
         } catch { /* handled */ }
         setLoading(false);
     };

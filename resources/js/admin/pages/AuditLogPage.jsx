@@ -27,7 +27,7 @@ export default function AuditLogPage() {
     const openDetail = async (log) => {
         try {
             const { data } = await api.get(`/campaigns/${campaignId}/audit-logs/${log.id}`);
-            setShowDetail(data.data);
+            setShowDetail(data.audit_log || data.data);
         } catch {
             setShowDetail(log);
         }

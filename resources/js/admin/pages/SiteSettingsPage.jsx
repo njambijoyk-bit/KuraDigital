@@ -22,7 +22,7 @@ export default function SiteSettingsPage() {
             setLoading(true);
             try {
                 const { data } = await api.get(`/campaigns/${campaignId}/site`);
-                const s = data.data;
+                const s = data.site || data.data;
                 setSite(s);
                 setForm({
                     candidate_name: s.candidate_name || '',
@@ -61,11 +61,11 @@ export default function SiteSettingsPage() {
         try {
             if (site) {
                 const { data } = await api.put(`/campaigns/${campaignId}/site`, form);
-                setSite(data.data);
+                setSite(data.site || data.data);
                 setMessage({ type: 'success', text: 'Site settings updated' });
             } else {
                 const { data } = await api.post(`/campaigns/${campaignId}/site`, form);
-                setSite(data.data);
+                setSite(data.site || data.data);
                 setMessage({ type: 'success', text: 'Site created' });
             }
         } catch (err) {
