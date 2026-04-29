@@ -18,6 +18,7 @@ const VolunteersPage = lazy(() => import('./pages/VolunteersPage'));
 const ContactsPage = lazy(() => import('./pages/ContactsPage'));
 const MediaPage = lazy(() => import('./pages/MediaPage'));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
+const OpponentsPage = lazy(() => import('./pages/OpponentsPage'));
 
 function Loading() {
     return (
@@ -63,6 +64,7 @@ export default function AdminApp() {
                     <Route path="projects" element={<ProjectsPage />} />
                     <Route path="volunteers" element={<VolunteersPage />} />
                     <Route path="contacts" element={<ContactsPage />} />
+                    <Route path="opponents" element={<OpponentsPage />} />
                     <Route path="media" element={<MediaPage />} />
                     <Route path="audit" element={<AuditLogPage />} />
                 </Route>

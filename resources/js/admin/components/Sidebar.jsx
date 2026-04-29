@@ -15,6 +15,7 @@ import {
     ClipboardDocumentListIcon,
     BuildingOffice2Icon,
     ChevronLeftIcon,
+    UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
 const campaignNav = [
@@ -28,6 +29,7 @@ const campaignNav = [
     { to: 'projects', icon: FolderIcon, label: 'Projects' },
     { to: 'volunteers', icon: HandRaisedIcon, label: 'Volunteers' },
     { to: 'contacts', icon: EnvelopeIcon, label: 'Contacts' },
+    { to: 'opponents', icon: UserGroupIcon, label: 'Opponents' },
     { to: 'media', icon: FilmIcon, label: 'Media Library' },
     { to: 'audit', icon: ClipboardDocumentListIcon, label: 'Audit Log' },
 ];
