@@ -34,6 +34,18 @@ class MediaController extends Controller
             });
         }
 
+        // ABAC: filter media by user's clearance level
+        $user = $request->user();
+        if (!$user->hasClearance('top_secret')) {
+            if ($user->hasClearance('confidential')) {
+                $query->whereIn('clearance', ['public', 'internal', 'confidential']);
+            } elseif ($user->hasClearance('internal')) {
+                $query->whereIn('clearance', ['public', 'internal']);
+            } else {
+                $query->where('clearance', 'public');
+            }
+        }
+
         $media = $query->orderByDesc('created_at')->paginate(20);
 
         return response()->json($media);
@@ -49,6 +61,7 @@ class MediaController extends Controller
             'collection' => ['nullable', 'string', 'max:100'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string'],
+            'clearance' => ['nullable', 'in:public,internal,confidential,top_secret'],
         ]);
 
         $file = $request->file('file');
@@ -69,6 +82,7 @@ class MediaController extends Controller
             'url' => Storage::disk('public')->url($path),
             'alt_text' => $validated['alt_text'] ?? null,
             'collection' => $validated['collection'] ?? 'default',
+            'clearance' => $validated['clearance'] ?? 'public',
             'tags' => $validated['tags'] ?? null,
         ]);
 
@@ -78,12 +92,16 @@ class MediaController extends Controller
         ], 201);
     }
 
-    public function show(Campaign $campaign, Media $media): JsonResponse
+    public function show(Request $request, Campaign $campaign, Media $media): JsonResponse
     {
         $this->authorize('view', $media);
 
         if ($media->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Media not found.'], 404);
+        }
+
+        if (!$request->user()->hasClearance($media->clearance ?? 'public')) {
+            return response()->json(['message' => 'Insufficient clearance level.'], 403);
         }
 
         return response()->json(['media' => $media->load('uploader:id,name')]);
@@ -102,6 +120,7 @@ class MediaController extends Controller
             'collection' => ['sometimes', 'string', 'max:100'],
             'tags' => ['sometimes', 'nullable', 'array'],
             'tags.*' => ['string'],
+            'clearance' => ['sometimes', 'in:public,internal,confidential,top_secret'],
         ]);
 
         $media->update($validated);
@@ -112,12 +131,16 @@ class MediaController extends Controller
         ]);
     }
 
-    public function destroy(Campaign $campaign, Media $media): JsonResponse
+    public function destroy(Request $request, Campaign $campaign, Media $media): JsonResponse
     {
         $this->authorize('delete', $media);
 
         if ($media->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Media not found.'], 404);
+        }
+
+        if (!$request->user()->hasClearance($media->clearance ?? 'public')) {
+            return response()->json(['message' => 'Insufficient clearance level.'], 403);
         }
 
         Storage::disk($media->disk)->delete($media->path);

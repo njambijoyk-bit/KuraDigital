@@ -19,6 +19,7 @@ class Media extends Model
         'url',
         'alt_text',
         'collection',
+        'clearance',
         'tags',
         'metadata',
     ];

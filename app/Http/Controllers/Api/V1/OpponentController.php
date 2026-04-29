@@ -176,8 +176,12 @@ class OpponentController extends Controller
             $query->where('clearance', $request->input('clearance'));
         }
 
-        if (!$request->user()->can('opponents.view-confidential')) {
-            $query->whereNotIn('clearance', ['confidential', 'restricted']);
+        // ABAC: filter research by user's clearance level
+        $user = $request->user();
+        if (!$user->hasClearance('top_secret')) {
+            if (!$user->hasClearance('confidential')) {
+                $query->whereNotIn('clearance', ['confidential', 'restricted']);
+            }
         }
 
         $research = $query->orderByDesc('created_at')->paginate(20);
