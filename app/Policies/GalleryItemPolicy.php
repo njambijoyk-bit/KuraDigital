@@ -9,21 +9,21 @@ class GalleryItemPolicy
 {
     public function viewAny(User $user, Campaign $campaign): bool
     {
-        return $user->can('gallery.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('gallery.view', $campaign);
     }
 
     public function create(User $user, Campaign $campaign): bool
     {
-        return $user->can('gallery.create') && $user->isMemberOf($campaign);
+        return $user->campaignCan('gallery.create', $campaign);
     }
 
     public function update(User $user, Campaign $campaign): bool
     {
-        return $user->can('gallery.edit') && $user->isMemberOf($campaign);
+        return $user->campaignCan('gallery.edit', $campaign);
     }
 
     public function delete(User $user, Campaign $campaign): bool
     {
-        return $user->can('gallery.delete') && $user->isMemberOf($campaign);
+        return $user->campaignCan('gallery.delete', $campaign);
     }
 }

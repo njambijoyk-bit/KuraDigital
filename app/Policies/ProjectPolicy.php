@@ -9,21 +9,21 @@ class ProjectPolicy
 {
     public function viewAny(User $user, Campaign $campaign): bool
     {
-        return $user->can('projects.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('projects.view', $campaign);
     }
 
     public function create(User $user, Campaign $campaign): bool
     {
-        return $user->can('projects.create') && $user->isMemberOf($campaign);
+        return $user->campaignCan('projects.create', $campaign);
     }
 
     public function update(User $user, Campaign $campaign): bool
     {
-        return $user->can('projects.edit') && $user->isMemberOf($campaign);
+        return $user->campaignCan('projects.edit', $campaign);
     }
 
     public function delete(User $user, Campaign $campaign): bool
     {
-        return $user->can('projects.delete') && $user->isMemberOf($campaign);
+        return $user->campaignCan('projects.delete', $campaign);
     }
 }

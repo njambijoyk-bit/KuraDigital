@@ -17,6 +17,12 @@ class OpponentController extends Controller
 
         $query = $campaign->opponents();
 
+        // Apply geographic ABAC filters
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership) {
+            $membership->applyGeographicFilters($query, ['ward', 'constituency', 'county']);
+        }
+
         if ($request->has('threat_level')) {
             $query->where('threat_level', $request->input('threat_level'));
         }
@@ -75,12 +81,17 @@ class OpponentController extends Controller
         ], 201);
     }
 
-    public function show(Campaign $campaign, Opponent $opponent): JsonResponse
+    public function show(Request $request, Campaign $campaign, Opponent $opponent): JsonResponse
     {
         $this->authorize('viewAny', [Opponent::class, $campaign]);
 
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($opponent)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $opponent->loadCount('research');
@@ -94,6 +105,11 @@ class OpponentController extends Controller
 
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($opponent)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $validated = $request->validate([
@@ -121,12 +137,17 @@ class OpponentController extends Controller
         ]);
     }
 
-    public function destroy(Campaign $campaign, Opponent $opponent): JsonResponse
+    public function destroy(Request $request, Campaign $campaign, Opponent $opponent): JsonResponse
     {
         $this->authorize('delete', [Opponent::class, $campaign]);
 
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($opponent)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $opponent->delete();
@@ -142,6 +163,11 @@ class OpponentController extends Controller
 
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($opponent)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $query = $opponent->research()->with('author:id,name');
@@ -165,6 +191,11 @@ class OpponentController extends Controller
 
         if ($opponent->campaign_id !== $campaign->id) {
             return response()->json(['message' => 'Opponent not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($opponent)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $validated = $request->validate([
@@ -195,6 +226,11 @@ class OpponentController extends Controller
             return response()->json(['message' => 'Research not found.'], 404);
         }
 
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($opponent)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
+        }
+
         $validated = $request->validate([
             'title' => ['sometimes', 'string', 'max:255'],
             'content' => ['sometimes', 'string'],
@@ -217,6 +253,11 @@ class OpponentController extends Controller
 
         if ($opponent->campaign_id !== $campaign->id || $research->opponent_id !== $opponent->id) {
             return response()->json(['message' => 'Research not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($opponent)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $research->delete();

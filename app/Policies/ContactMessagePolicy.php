@@ -9,26 +9,26 @@ class ContactMessagePolicy
 {
     public function viewAny(User $user, Campaign $campaign): bool
     {
-        return $user->can('contacts.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('contacts.view', $campaign);
     }
 
     public function view(User $user, Campaign $campaign): bool
     {
-        return $user->can('contacts.view') && $user->isMemberOf($campaign);
+        return $user->campaignCan('contacts.view', $campaign);
     }
 
     public function update(User $user, Campaign $campaign): bool
     {
-        return $user->can('contacts.respond') && $user->isMemberOf($campaign);
+        return $user->campaignCan('contacts.respond', $campaign);
     }
 
     public function delete(User $user, Campaign $campaign): bool
     {
-        return $user->can('contacts.archive') && $user->isMemberOf($campaign);
+        return $user->campaignCan('contacts.archive', $campaign);
     }
 
     public function export(User $user, Campaign $campaign): bool
     {
-        return $user->can('contacts.export') && $user->isMemberOf($campaign);
+        return $user->campaignCan('contacts.export', $campaign);
     }
 }

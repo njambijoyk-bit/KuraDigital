@@ -56,6 +56,7 @@ class CampaignController extends Controller
         // Add creator as campaign owner
         $campaign->members()->create([
             'user_id' => $request->user()->id,
+            'role' => 'campaign-owner',
             'visibility_scope' => $validated['level'] === 'national' ? 'national' : 'own_campaign',
         ]);
 
