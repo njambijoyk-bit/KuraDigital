@@ -115,6 +115,10 @@ class MediaController extends Controller
             return response()->json(['message' => 'Media not found.'], 404);
         }
 
+        if (!$request->user()->hasClearance($media->clearance ?? 'public')) {
+            return response()->json(['message' => 'Insufficient clearance level.'], 403);
+        }
+
         $validated = $request->validate([
             'alt_text' => ['sometimes', 'nullable', 'string', 'max:255'],
             'collection' => ['sometimes', 'string', 'max:100'],
