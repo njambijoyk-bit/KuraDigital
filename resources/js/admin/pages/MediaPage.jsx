@@ -129,7 +129,7 @@ export default function MediaPage() {
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                        {can('media.edit') && <button onClick={() => openEdit(item)} className="p-2 bg-white rounded-full shadow-md mr-2"><PencilIcon className="h-4 w-4 text-gray-700" /></button>}
+                                        {can('media.manage') && <button onClick={() => openEdit(item)} className="p-2 bg-white rounded-full shadow-md mr-2"><PencilIcon className="h-4 w-4 text-gray-700" /></button>}
                                         {can('media.delete') && <button onClick={() => handleDelete(item.id)} className="p-2 bg-white rounded-full shadow-md"><TrashIcon className="h-4 w-4 text-red-500" /></button>}
                                     </div>
                                 </div>

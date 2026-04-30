@@ -157,7 +157,7 @@ export default function TeamPage() {
             key: 'actions', label: '',
             render: (r) => (
                 <div className="flex items-center space-x-1">
-                    {can('team.manage') && <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded transition-colors">
+                    {can('team.assign-roles') && <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded transition-colors">
                         <PencilIcon className="h-4 w-4" />
                     </button>}
                     {can('team.deactivate') && <button onClick={() => handleDeactivate(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors">

@@ -105,7 +105,7 @@ export default function ContactsPage() {
             <div className="flex items-center space-x-1">
                 <button onClick={() => openDetail(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded" title="View"><EyeIcon className="h-4 w-4" /></button>
                 {can('contacts.respond') && !r.is_archived && <button onClick={() => handleArchive(r.id)} className="p-1.5 text-gray-400 hover:text-yellow-600 rounded" title="Archive"><EnvelopeIcon className="h-4 w-4" /></button>}
-                {can('contacts.delete') && <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded" title="Delete"><TrashIcon className="h-4 w-4" /></button>}
+                {can('contacts.archive') && <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded" title="Delete"><TrashIcon className="h-4 w-4" /></button>}
             </div>
         )},
     ];
