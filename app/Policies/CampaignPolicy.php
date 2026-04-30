@@ -28,6 +28,12 @@ class CampaignPolicy
             return true;
         }
 
+        // Allow users with no memberships to create their first campaign
+        if (!$user->activeMemberships()->exists()) {
+            return true;
+        }
+
+        // Existing members need a leadership role to create additional campaigns
         return $user->activeMemberships()
             ->whereIn('role', ['campaign-owner', 'campaign-director', 'deputy-campaign-director'])
             ->exists();
