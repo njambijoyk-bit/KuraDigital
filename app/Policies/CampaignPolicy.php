@@ -9,7 +9,8 @@ class CampaignPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('campaign.view');
+        return $user->hasRole(['platform-owner', 'platform-support'])
+            || $user->activeMemberships()->exists();
     }
 
     public function view(User $user, Campaign $campaign): bool
@@ -27,7 +28,9 @@ class CampaignPolicy
             return true;
         }
 
-        return $user->can('campaign.create-child');
+        return $user->activeMemberships()
+            ->whereIn('role', ['campaign-owner', 'campaign-director', 'deputy-campaign-director'])
+            ->exists();
     }
 
     public function update(User $user, Campaign $campaign): bool
@@ -71,6 +74,6 @@ class CampaignPolicy
         }
 
         $membership = $user->membershipFor($campaign);
-        return $membership && in_array($membership->visibility_scope, ['county', 'national']);
+        return $membership && in_array($membership->visibility_scope, ['constituency', 'county', 'national']);
     }
 }

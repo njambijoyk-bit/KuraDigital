@@ -60,8 +60,6 @@ class CampaignController extends Controller
             'visibility_scope' => $validated['level'] === 'national' ? 'national' : 'own_campaign',
         ]);
 
-        $request->user()->assignRole('campaign-owner');
-
         return response()->json([
             'message' => 'Campaign created.',
             'campaign' => $campaign->load('parent'),

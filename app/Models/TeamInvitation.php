@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TeamInvitation extends Model
 {
+    use Auditable;
+
     protected $fillable = [
         'campaign_id',
         'invited_by',
@@ -48,5 +51,10 @@ class TeamInvitation extends Model
     public function isPending(): bool
     {
         return $this->status === 'pending' && !$this->isExpired();
+    }
+
+    public function getAuditCampaignId(): ?int
+    {
+        return $this->campaign_id;
     }
 }

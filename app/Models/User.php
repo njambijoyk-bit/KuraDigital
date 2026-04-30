@@ -84,7 +84,7 @@ class User extends Authenticatable
 
     public function hasClearance(string $level): bool
     {
-        $levels = ['public' => 0, 'internal' => 1, 'confidential' => 2, 'top_secret' => 3];
+        $levels = ['public' => 0, 'internal' => 1, 'confidential' => 2, 'restricted' => 3, 'top_secret' => 3];
         return ($levels[$this->clearance_level] ?? 0) >= ($levels[$level] ?? 0);
     }
 

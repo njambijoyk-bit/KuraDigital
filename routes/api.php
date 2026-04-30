@@ -62,7 +62,7 @@ Route::prefix('v1')->group(function () {
 
         // Campaigns (list / create — no campaign context needed)
         Route::get('/campaigns', [CampaignController::class, 'index']);
-        Route::post('/campaigns', [CampaignController::class, 'store']);
+        Route::post('/campaigns', [CampaignController::class, 'store'])->middleware('throttle:campaign-create');
 
         // Campaign-scoped routes
         Route::middleware('campaign.access')->prefix('campaigns/{campaign}')->group(function () {
@@ -76,7 +76,7 @@ Route::prefix('v1')->group(function () {
 
             // Team management
             Route::get('/members', [TeamController::class, 'members']);
-            Route::post('/invite', [TeamController::class, 'invite']);
+            Route::post('/invite', [TeamController::class, 'invite'])->middleware('throttle:campaign-invite');
             Route::put('/members/{member}', [TeamController::class, 'updateMember']);
             Route::delete('/members/{member}', [TeamController::class, 'deactivateMember']);
             Route::get('/invitations', [TeamController::class, 'pendingInvitations']);

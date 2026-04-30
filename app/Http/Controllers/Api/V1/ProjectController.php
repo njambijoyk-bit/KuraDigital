@@ -83,12 +83,17 @@ class ProjectController extends Controller
         ], 201);
     }
 
-    public function show(Campaign $campaign, Project $project): JsonResponse
+    public function show(Request $request, Campaign $campaign, Project $project): JsonResponse
     {
         $this->authorize('viewAny', [Project::class, $campaign]);
 
         if (!$this->belongsToCampaign($campaign, $project)) {
             return response()->json(['message' => 'Project not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($project)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         return response()->json(['project' => $project]);
@@ -100,6 +105,11 @@ class ProjectController extends Controller
 
         if (!$this->belongsToCampaign($campaign, $project)) {
             return response()->json(['message' => 'Project not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($project)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $validated = $request->validate([
@@ -123,12 +133,17 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function destroy(Campaign $campaign, Project $project): JsonResponse
+    public function destroy(Request $request, Campaign $campaign, Project $project): JsonResponse
     {
         $this->authorize('delete', [Project::class, $campaign]);
 
         if (!$this->belongsToCampaign($campaign, $project)) {
             return response()->json(['message' => 'Project not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($project)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $project->delete();

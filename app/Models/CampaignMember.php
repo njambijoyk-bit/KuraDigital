@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CampaignMember extends Model
 {
+    use Auditable;
+
     protected $fillable = [
         'user_id',
         'campaign_id',
@@ -132,5 +135,10 @@ class CampaignMember extends Model
             'is_active' => false,
             'deactivated_at' => now(),
         ]);
+    }
+
+    public function getAuditCampaignId(): ?int
+    {
+        return $this->campaign_id;
     }
 }

@@ -27,7 +27,7 @@ trait Auditable
             }
 
             // Exclude password hashes and tokens from audit
-            $exclude = ['password', 'remember_token', 'mfa_secret', 'invite_token'];
+            $exclude = ['password', 'remember_token', 'mfa_secret', 'invite_token', 'token'];
             $oldValues = array_diff_key($oldValues, array_flip($exclude));
             $newValues = array_diff_key($newValues, array_flip($exclude));
 
