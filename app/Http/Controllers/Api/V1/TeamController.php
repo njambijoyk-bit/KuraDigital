@@ -55,12 +55,15 @@ class TeamController extends Controller
             ], 403);
         }
 
+        $rawToken = Str::random(64);
+        $tokenHash = hash_hmac('sha256', $rawToken, config('app.key'));
+
         $invitation = TeamInvitation::create([
             'campaign_id' => $campaign->id,
             'invited_by' => $request->user()->id,
             'email' => $validated['email'] ?? null,
             'phone' => $validated['phone'] ?? null,
-            'token' => Str::random(64),
+            'token' => $tokenHash,
             'role' => $validated['role'],
             'assigned_wards' => $validated['assigned_wards'] ?? null,
             'assigned_constituencies' => $validated['assigned_constituencies'] ?? null,
@@ -68,16 +71,19 @@ class TeamController extends Controller
             'expires_at' => now()->addDays(7),
         ]);
 
-        // Send invitation notification
+        // Send invitation notification with raw token
         if ($invitation->email) {
             (new AnonymousNotifiable)
                 ->route('mail', $invitation->email)
-                ->notify(new TeamInvitationNotification($invitation));
+                ->notify(new TeamInvitationNotification($invitation, $rawToken));
         }
+
+        $responseInvitation = $invitation->toArray();
+        $responseInvitation['token'] = $rawToken;
 
         return response()->json([
             'message' => 'Invitation sent.',
-            'invitation' => $invitation,
+            'invitation' => $responseInvitation,
         ], 201);
     }
 
@@ -87,7 +93,9 @@ class TeamController extends Controller
             'token' => ['required', 'string'],
         ]);
 
-        $invitation = TeamInvitation::where('token', $validated['token'])
+        $tokenHash = hash_hmac('sha256', $validated['token'], config('app.key'));
+
+        $invitation = TeamInvitation::where('token', $tokenHash)
             ->where('status', 'pending')
             ->first();
 
@@ -102,6 +110,10 @@ class TeamController extends Controller
 
         $user = $request->user();
 
+        if ($invitation->email && strtolower($invitation->email) !== strtolower($user->email)) {
+            return response()->json(['message' => 'This invitation was sent to a different email address.'], 403);
+        }
+
         // Create campaign membership with campaign-scoped role
         CampaignMember::updateOrCreate(
             ['user_id' => $user->id, 'campaign_id' => $invitation->campaign_id],
@@ -115,9 +127,6 @@ class TeamController extends Controller
                 'deactivated_at' => null,
             ]
         );
-
-        // Keep global role assignment for backward compatibility
-        $user->assignRole($invitation->role);
 
         $invitation->update([
             'status' => 'accepted',
@@ -140,7 +149,7 @@ class TeamController extends Controller
 
         $validated = $request->validate([
             'role' => ['sometimes', 'string', 'exists:roles,name'],
-            'visibility_scope' => ['sometimes', 'in:own_campaign,county,national'],
+            'visibility_scope' => ['sometimes', 'in:own_campaign,constituency,county,national'],
             'assigned_wards' => ['sometimes', 'nullable', 'array'],
             'assigned_wards.*' => ['string'],
             'assigned_constituencies' => ['sometimes', 'nullable', 'array'],
@@ -163,10 +172,7 @@ class TeamController extends Controller
                 ], 403);
             }
 
-            // Update campaign-scoped role on the pivot
             $member->update(['role' => $validated['role']]);
-            // Keep global role assignment for backward compatibility
-            $member->user->assignRole($validated['role']);
             unset($validated['role']);
         }
 

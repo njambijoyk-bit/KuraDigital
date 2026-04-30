@@ -9,7 +9,8 @@ class CampaignPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('campaign.view');
+        return $user->hasRole(['platform-owner', 'platform-support'])
+            || $user->activeMemberships()->exists();
     }
 
     public function view(User $user, Campaign $campaign): bool
@@ -27,7 +28,7 @@ class CampaignPolicy
             return true;
         }
 
-        return $user->can('campaign.create-child');
+        return $user->activeMemberships()->exists();
     }
 
     public function update(User $user, Campaign $campaign): bool

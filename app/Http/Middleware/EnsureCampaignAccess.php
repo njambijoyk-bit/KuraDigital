@@ -39,6 +39,13 @@ class EnsureCampaignAccess
             return $next($request);
         }
 
+        // M1: Check account status before membership to avoid info leak
+        if (!$user->isActive()) {
+            return response()->json([
+                'message' => 'Your account has been ' . $user->account_status . '.',
+            ], 403);
+        }
+
         // Check direct membership
         $membership = $user->membershipFor($campaign);
 
@@ -49,10 +56,6 @@ class EnsureCampaignAccess
 
         if (!$membership) {
             return response()->json(['message' => 'You are not a member of this campaign.'], 403);
-        }
-
-        if (!$user->isActive()) {
-            return response()->json(['message' => 'Your account is suspended.'], 403);
         }
 
         $request->merge([
@@ -78,6 +81,10 @@ class EnsureCampaignAccess
                 }
 
                 if ($scope === 'county' && $campaign->county === $current->county) {
+                    return $membership;
+                }
+
+                if ($scope === 'constituency' && $campaign->constituency === $current->constituency) {
                     return $membership;
                 }
             }

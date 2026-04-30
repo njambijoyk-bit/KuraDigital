@@ -32,6 +32,10 @@ class CampaignMemberPolicy
 
     public function update(User $user, CampaignMember $member): bool
     {
+        if ($user->id === $member->user_id) {
+            return false;
+        }
+
         $campaign = $member->campaign;
 
         if (!$user->campaignCan('team.assign-roles', $campaign)) {

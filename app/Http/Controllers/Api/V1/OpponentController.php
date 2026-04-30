@@ -212,6 +212,10 @@ class OpponentController extends Controller
             'date_observed' => ['nullable', 'date'],
         ]);
 
+        if (isset($validated['clearance']) && !$request->user()->hasClearance($validated['clearance'])) {
+            return response()->json(['message' => 'Cannot classify above your clearance level.'], 403);
+        }
+
         $validated['opponent_id'] = $opponent->id;
         $validated['created_by'] = $request->user()->id;
 
@@ -244,6 +248,10 @@ class OpponentController extends Controller
             'source' => ['sometimes', 'nullable', 'string', 'max:500'],
             'date_observed' => ['sometimes', 'nullable', 'date'],
         ]);
+
+        if (isset($validated['clearance']) && !$request->user()->hasClearance($validated['clearance'])) {
+            return response()->json(['message' => 'Cannot classify above your clearance level.'], 403);
+        }
 
         $research->update($validated);
 

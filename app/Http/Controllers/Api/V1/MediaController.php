@@ -64,6 +64,10 @@ class MediaController extends Controller
             'clearance' => ['nullable', 'in:public,internal,confidential,top_secret'],
         ]);
 
+        if (isset($validated['clearance']) && !$request->user()->hasClearance($validated['clearance'])) {
+            return response()->json(['message' => 'Cannot classify above your clearance level.'], 403);
+        }
+
         $file = $request->file('file');
         $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
         $path = "campaigns/{$campaign->id}/media/{$filename}";
@@ -126,6 +130,10 @@ class MediaController extends Controller
             'tags.*' => ['string'],
             'clearance' => ['sometimes', 'in:public,internal,confidential,top_secret'],
         ]);
+
+        if (isset($validated['clearance']) && !$request->user()->hasClearance($validated['clearance'])) {
+            return response()->json(['message' => 'Cannot classify above your clearance level.'], 403);
+        }
 
         $media->update($validated);
 

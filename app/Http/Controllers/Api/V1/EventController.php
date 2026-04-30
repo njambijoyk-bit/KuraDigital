@@ -87,12 +87,17 @@ class EventController extends Controller
         ], 201);
     }
 
-    public function show(Campaign $campaign, Event $event): JsonResponse
+    public function show(Request $request, Campaign $campaign, Event $event): JsonResponse
     {
         $this->authorize('viewAny', [Event::class, $campaign]);
 
         if (!$this->belongsToCampaign($campaign, $event)) {
             return response()->json(['message' => 'Event not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($event)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         return response()->json(['event' => $event]);
@@ -104,6 +109,11 @@ class EventController extends Controller
 
         if (!$this->belongsToCampaign($campaign, $event)) {
             return response()->json(['message' => 'Event not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($event)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $validated = $request->validate([
@@ -127,12 +137,17 @@ class EventController extends Controller
         ]);
     }
 
-    public function destroy(Campaign $campaign, Event $event): JsonResponse
+    public function destroy(Request $request, Campaign $campaign, Event $event): JsonResponse
     {
         $this->authorize('delete', [Event::class, $campaign]);
 
         if (!$this->belongsToCampaign($campaign, $event)) {
             return response()->json(['message' => 'Event not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($event)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $event->delete();

@@ -55,12 +55,17 @@ class ContactMessageController extends Controller
         return response()->json($messages);
     }
 
-    public function show(Campaign $campaign, ContactMessage $message): JsonResponse
+    public function show(Request $request, Campaign $campaign, ContactMessage $message): JsonResponse
     {
         $this->authorize('view', [ContactMessage::class, $campaign]);
 
         if (!$this->belongsToCampaign($campaign, $message)) {
             return response()->json(['message' => 'Message not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($message)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         if (!$message->is_read) {
@@ -76,6 +81,11 @@ class ContactMessageController extends Controller
 
         if (!$this->belongsToCampaign($campaign, $message)) {
             return response()->json(['message' => 'Message not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($message)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $validated = $request->validate([
@@ -97,12 +107,17 @@ class ContactMessageController extends Controller
         ]);
     }
 
-    public function destroy(Campaign $campaign, ContactMessage $message): JsonResponse
+    public function destroy(Request $request, Campaign $campaign, ContactMessage $message): JsonResponse
     {
         $this->authorize('delete', [ContactMessage::class, $campaign]);
 
         if (!$this->belongsToCampaign($campaign, $message)) {
             return response()->json(['message' => 'Message not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($message)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
         }
 
         $message->delete();

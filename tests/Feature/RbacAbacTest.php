@@ -51,7 +51,7 @@ class RbacAbacTest extends TestCase
         $this->owner = User::factory()->create();
         $this->contentEditor = User::factory()->create();
         $this->volunteer = User::factory()->create();
-        $this->researchOfficer = User::factory()->create();
+        $this->researchOfficer = User::factory()->create(['clearance_level' => 'confidential']);
         $this->fieldDirector = User::factory()->create();
 
         $this->createMembership($this->owner, 'campaign-owner');
@@ -581,5 +581,175 @@ class RbacAbacTest extends TestCase
         $this->actingAs($donor)
             ->getJson("/api/v1/campaigns/{$this->campaign->id}/events")
             ->assertForbidden();
+    }
+
+    // =====================================================================
+    // C1 — Global role accumulation must NOT bleed across campaigns
+    // =====================================================================
+
+    public function test_global_roles_do_not_bleed_across_campaigns(): void
+    {
+        $otherCampaign = Campaign::create([
+            'name' => 'Other Campaign',
+            'slug' => 'other-campaign',
+            'level' => 'county',
+            'is_active' => true,
+        ]);
+
+        $this->createMembership($this->volunteer, 'campaign-owner', [
+            'campaign_id' => $otherCampaign->id,
+        ]);
+
+        // Volunteer should still be a volunteer in the original campaign
+        $this->actingAs($this->volunteer)
+            ->postJson("/api/v1/campaigns/{$this->campaign->id}/opponents", [
+                'name' => 'Should Fail', 'threat_level' => 'low',
+            ])
+            ->assertForbidden();
+    }
+
+    // =====================================================================
+    // C2 — Clearance write validation
+    // =====================================================================
+
+    public function test_low_clearance_user_cannot_create_restricted_research(): void
+    {
+        $lowClearanceResearcher = User::factory()->create(['clearance_level' => 'public']);
+        $this->createMembership($lowClearanceResearcher, 'research-officer');
+
+        $opponent = Opponent::create([
+            'campaign_id' => $this->campaign->id,
+            'name' => 'Test Opponent',
+            'threat_level' => 'medium',
+        ]);
+
+        $this->actingAs($lowClearanceResearcher)
+            ->postJson("/api/v1/campaigns/{$this->campaign->id}/opponents/{$opponent->id}/research", [
+                'title' => 'Secret Intel',
+                'content' => 'Classified info',
+                'clearance' => 'restricted',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_high_clearance_user_can_create_restricted_research(): void
+    {
+        $highClearanceResearcher = User::factory()->create(['clearance_level' => 'top_secret']);
+        $this->createMembership($highClearanceResearcher, 'research-officer');
+
+        $opponent = Opponent::create([
+            'campaign_id' => $this->campaign->id,
+            'name' => 'Test Opponent 2',
+            'threat_level' => 'high',
+        ]);
+
+        $this->actingAs($highClearanceResearcher)
+            ->postJson("/api/v1/campaigns/{$this->campaign->id}/opponents/{$opponent->id}/research", [
+                'title' => 'Top Secret Intel',
+                'content' => 'Very classified',
+                'clearance' => 'restricted',
+            ])
+            ->assertCreated();
+    }
+
+    // =====================================================================
+    // C3 — Geographic ABAC on individual event actions
+    // =====================================================================
+
+    public function test_geographic_filter_blocks_show_event_in_wrong_ward(): void
+    {
+        $event = Event::create([
+            'site_id' => $this->site->id,
+            'title' => 'Ward B Only Event',
+            'date' => '2026-07-01',
+            'ward' => 'ward-b',
+        ]);
+
+        $wardUser = User::factory()->create();
+        $this->createMembership($wardUser, 'content-editor', [
+            'assigned_wards' => ['ward-a'],
+        ]);
+
+        $this->actingAs($wardUser)
+            ->getJson("/api/v1/campaigns/{$this->campaign->id}/events/{$event->id}")
+            ->assertForbidden();
+    }
+
+    public function test_geographic_filter_blocks_update_project_in_wrong_county(): void
+    {
+        $project = Project::create([
+            'site_id' => $this->site->id,
+            'title' => 'Mombasa Only Project',
+            'status' => 'planned',
+            'county' => 'Mombasa',
+        ]);
+
+        $nairobiUser = User::factory()->create();
+        $this->createMembership($nairobiUser, 'content-editor', [
+            'assigned_counties' => ['Nairobi'],
+        ]);
+
+        $this->actingAs($nairobiUser)
+            ->putJson("/api/v1/campaigns/{$this->campaign->id}/projects/{$project->id}", [
+                'title' => 'Hacked Title',
+            ])
+            ->assertForbidden();
+    }
+
+    // =====================================================================
+    // H2 — Invitation email mismatch rejection
+    // =====================================================================
+
+    public function test_invitation_rejects_wrong_email(): void
+    {
+        $rawToken = \Illuminate\Support\Str::random(64);
+        $tokenHash = hash_hmac('sha256', $rawToken, config('app.key'));
+
+        \App\Models\TeamInvitation::create([
+            'campaign_id' => $this->campaign->id,
+            'invited_by' => $this->owner->id,
+            'email' => 'intended@example.com',
+            'token' => $tokenHash,
+            'role' => 'content-editor',
+            'expires_at' => now()->addDays(7),
+            'status' => 'pending',
+        ]);
+
+        $wrongUser = User::factory()->create(['email' => 'wrong@example.com']);
+
+        $this->actingAs($wrongUser)
+            ->postJson('/api/v1/invitations/accept', ['token' => $rawToken])
+            ->assertForbidden();
+    }
+
+    // =====================================================================
+    // H3 — Self-role modification blocked
+    // =====================================================================
+
+    public function test_owner_cannot_modify_own_role(): void
+    {
+        $ownerMembership = CampaignMember::where('user_id', $this->owner->id)
+            ->where('campaign_id', $this->campaign->id)
+            ->first();
+
+        $this->actingAs($this->owner)
+            ->putJson("/api/v1/campaigns/{$this->campaign->id}/members/{$ownerMembership->id}", [
+                'role' => 'volunteer',
+            ])
+            ->assertForbidden();
+    }
+
+    // =====================================================================
+    // M1 — Suspended account checked before membership
+    // =====================================================================
+
+    public function test_suspended_non_member_gets_suspended_message(): void
+    {
+        $suspended = User::factory()->create(['account_status' => 'suspended']);
+
+        $this->actingAs($suspended)
+            ->getJson("/api/v1/campaigns/{$this->campaign->id}/events")
+            ->assertForbidden()
+            ->assertJson(['message' => 'Your account has been suspended.']);
     }
 }
