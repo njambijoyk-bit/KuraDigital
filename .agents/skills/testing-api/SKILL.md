@@ -14,7 +14,7 @@ KuraDigital is a Laravel 10 campaign manager platform with a React frontend. The
 
 ### Setup Steps
 ```bash
-cd /home/ubuntu/KuraDigital
+cd /home/ubuntu/repos/KuraDigital
 composer install --no-interaction
 
 # For local testing, switch mail to log driver to avoid SMTP errors:
@@ -26,6 +26,18 @@ php artisan serve --host=127.0.0.1 --port=8000 &
 ```
 
 The `migrate:fresh --seed` command runs `RolesAndPermissionsSeeder` which creates 26 roles and 126 permissions via Spatie Laravel-Permission.
+
+### Seeding Reliability
+**Important:** After `migrate:fresh --seed`, verify roles were actually created:
+```bash
+sqlite3 database/database.sqlite "SELECT COUNT(*) FROM roles;"
+# Should return 26. If 0, run:
+php artisan db:seed --class=RolesAndPermissionsSeeder
+```
+The Spatie permission cache can sometimes cause the seeder to report success while roles are not persisted. Always verify after seeding.
+
+### PHPUnit and Live API Testing Interaction
+**Critical:** Running `php artisan test` (PHPUnit) uses the `RefreshDatabase` trait which wipes the SQLite database. If you are running live API tests (curl) in parallel with PHPUnit tests, the PHPUnit run will destroy all your test users, tokens, campaigns, and data. Always run PHPUnit tests BEFORE setting up live API test data, or re-seed after PHPUnit completes.
 
 ## API Testing Patterns
 
@@ -54,6 +66,19 @@ curl -s http://127.0.0.1:8000/api/v1/auth/me \
   -H "Authorization: Bearer {token}"
 ```
 
+### Rate Limiting on Auth Endpoints
+The register and login endpoints have rate limiting. If you hit "Too Many Attempts" (429), clear the cache:
+```bash
+php artisan cache:clear
+```
+Alternatively, create test users via tinker to avoid rate limits entirely:
+```bash
+php artisan tinker --execute="
+\$user = \App\Models\User::create(['name'=>'Test','email'=>'test@example.com','password'=>bcrypt('Password1'),'clearance_level'=>'public','account_status'=>'active']);
+echo 'TOKEN=' . \$user->createToken('test')->plainTextToken;
+"
+```
+
 ### Campaign Creation
 When creating a campaign, `election_type` must be one of: `presidential`, `gubernatorial`, `senatorial`, `woman_rep`, `parliamentary`, `mca`, `other`. The `level` must be: `national`, `county`, `constituency`, or `ward`.
 
@@ -66,7 +91,7 @@ php artisan tinker --execute="\App\Models\User::find(1)->assignRole('platform-ow
 Routes under `/api/v1/campaigns/{campaign}/...` require the authenticated user to be a member of the campaign. Creating a campaign auto-adds the creator as `campaign-owner`.
 
 ### Multi-Tenant Testing
-To test tenant isolation, register two separate users. User A creates a campaign, User B should get 403 on all campaign-scoped routes until invited.
+To test tenant isolation, register two separate users. User A creates a campaign, User B should get 403 on all campaign-scoped routes until invited. The error message is: "You are not a member of this campaign."
 
 ### Team Invite Flow
 1. User A: `POST /campaigns/{id}/invite` with `{email, role, assigned_wards}`
@@ -74,7 +99,20 @@ To test tenant isolation, register two separate users. User A creates a campaign
 3. User B: `POST /invitations/accept` with `{token}` (the raw token from step 2)
 4. User B can now access campaign-scoped routes
 
-**Note:** The mail driver must be set to `log` (not `smtp`) for local testing. Otherwise invite requests fail with SMTP connection errors. The raw token is returned in the API response; the DB stores an HMAC hash.
+**Note:** The mail driver must be set to `log` (not `smtp`) for local testing. Otherwise invite requests fail with SMTP connection errors (`mailpit:1025` not available). The raw token is returned in the API response; the DB stores an HMAC hash.
+
+### RBAC Testing Patterns
+All 13 controllers enforce RBAC via `$this->authorize()` calls. To test:
+1. Create users with different roles via tinker (faster than API registration)
+2. Create campaign memberships with specific roles
+3. Verify authorized roles get 200/201 and unauthorized roles get 403
+
+Key role-permission boundaries to test:
+- `volunteer` has zero opponent permissions → expect 403 on all opponent endpoints
+- `research-officer` can create opponents and research but lacks `opponents.view-confidential`
+- `content-editor` can create events/news/gallery but cannot delete events
+- `finance-director` cannot create events
+- `donor` cannot view events
 
 ### ABAC / Clearance-Level Testing
 Some features (e.g., opponent research, media) use clearance levels (`public`, `internal`, `confidential`, `restricted`/`top_secret`). To test ABAC:
@@ -84,7 +122,15 @@ Some features (e.g., opponent research, media) use clearance levels (`public`, `
 4. Verify the lower role cannot create items above their clearance (expect 403 with "Cannot classify above your clearance level")
 5. Verify the lower role CAN see/create items at or below their clearance (expect 200/201)
 
-**Registration does not set `clearance_level`** — it defaults to null. You must set it via DB for clearance testing.
+**Registration does not set `clearance_level`** — it defaults to null. You must set it via DB for clearance testing. The `hasClearance()` method treats null as level 0 (public).
+
+Valid `clearance_level` values: `public`, `internal`, `confidential`, `top_secret`. The `visibility_scope` on campaign_members must be one of: `own_campaign`, `county`, `national`.
+
+### Role Hierarchy Testing
+The `RoleHierarchy` service (in `app/Services/RoleHierarchy.php`) defines 6 tiers. To test:
+1. As `volunteer` (tier 5), try to invite someone as `campaign-owner` (tier 2) → expect 403 "You cannot assign a role at or above your own level."
+2. As `campaign-owner` (tier 2), invite as `volunteer` (tier 5) → expect 201
+3. Owner cannot modify own role → `PUT /campaigns/{id}/members/{own_id}` with `{"role": "volunteer"}` → expect 403
 
 ### Geographic ABAC Testing
 Some resources (events, projects, contact messages) have geographic fields (ward, constituency, county). To test:
@@ -130,10 +176,10 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/campaigns/{id}/media \
 
 ## Known Issues
 
+- **FIELD() MySQL function crashes on SQLite**: `OpponentController.php` uses `FIELD(threat_level, 'critical', 'high', 'medium', 'low')` for sorting which is MySQL-specific. On SQLite, the opponents list endpoint returns HTTP 500 when any opponent exists. The PHPUnit test suite explicitly skips the opponent geographic filter test because of this. Fix: replace with `CASE WHEN threat_level = 'critical' THEN 1 WHEN threat_level = 'high' THEN 2 WHEN threat_level = 'medium' THEN 3 WHEN threat_level = 'low' THEN 4 ELSE 5 END`.
 - **Audit log `campaign_id` for Campaign model**: Fixed — Campaign model has `getAuditCampaignId()` returning `$this->id`. All models with `Auditable` trait should have this method if they don't have a direct `campaign_id` column.
 - **Vite manifest error on non-API routes**: The frontend build might not exist locally. This only affects non-API routes. API routes work fine with `Accept: application/json`.
 - **MFA in dev**: MFA verification accepts any 6-digit code in non-production environments.
-- **Enum sort order in SQLite**: `ORDER BY enum_column DESC` sorts alphabetically, not by logical severity. For example, `threat_level` sorts as `low > high > critical` instead of `critical > high > medium > low`. This might be fixed in the future with a CASE WHEN or numeric column.
 - **Frontend field name alignment**: Frontend forms may use different field names than the API expects. When testing content forms (events, site settings, manifesto), verify field names match the controller's validation rules.
 - **CampaignPolicy::create might be too restrictive**: If new users can't create campaigns, check whether `CampaignPolicy::create` requires existing leadership memberships. This might need a fix to allow first-time campaign creation.
 
@@ -151,6 +197,14 @@ Common roles: `platform-owner`, `campaign-owner`, `campaign-director`, `strategy
 - `strategy-director`: All except `opponents.delete` and `opponents.delete-research`
 - `research-officer`: `opponents.view`, `opponents.create`, `opponents.edit`, `opponents.view-research`, `opponents.add-research`, `opponents.edit-research` (NO `view-confidential`)
 - `legal-compliance-officer`: `opponents.view-research` only
+
+### Role Hierarchy Tiers
+- Tier 1: `platform-owner`, `platform-support` (not assignable via invite)
+- Tier 2: `campaign-owner`, `campaign-director`, `deputy-campaign-director`
+- Tier 3: Department heads (`field-director`, `communications-director`, `strategy-director`, etc.)
+- Tier 4: Operational (`content-editor`, `field-coordinator`, `data-analyst`, etc.)
+- Tier 5: Field/mobile (`polling-station-agent`, `campaign-agent`, `volunteer`, `election-observer`)
+- Tier 6: External (`coalition-partner`, `donor`, `auditor`)
 
 ## Devin Secrets Needed
 No secrets required for local API testing. Future phases may need:
