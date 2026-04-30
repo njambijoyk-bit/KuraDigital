@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CampaignMember extends Model
 {
@@ -99,7 +100,7 @@ class CampaignMember extends Model
         return true;
     }
 
-    public function applyGeographicFilters(Builder $query, array $fields = ['ward', 'constituency', 'county']): Builder
+    public function applyGeographicFilters(Builder|HasMany $query, array $fields = ['ward', 'constituency', 'county']): Builder|HasMany
     {
         if (in_array('ward', $fields) && !empty($this->assigned_wards)) {
             $query->where(function (Builder $q) {

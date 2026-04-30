@@ -68,7 +68,7 @@ class RbacAbacTest extends TestCase
             'campaign_id' => $this->campaign->id,
             'role' => $role,
             'is_active' => true,
-            'visibility_scope' => 'own',
+            'visibility_scope' => 'own_campaign',
         ], $extra));
     }
 
@@ -455,6 +455,10 @@ class RbacAbacTest extends TestCase
 
     public function test_geographic_filter_limits_opponents_to_assigned_ward(): void
     {
+        if (config('database.default') === 'sqlite') {
+            $this->markTestSkipped('OpponentController uses MySQL FIELD() function not supported by SQLite.');
+        }
+
         Opponent::create([
             'campaign_id' => $this->campaign->id,
             'name' => 'Opponent Ward A',
