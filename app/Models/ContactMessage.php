@@ -14,6 +14,7 @@ class ContactMessage extends Model
     protected $fillable = [
         'site_id', 'name', 'email', 'phone', 'message',
         'is_read', 'is_archived', 'assigned_to', 'response', 'responded_at',
+        'ward', 'constituency', 'county',
     ];
 
     protected $casts = [

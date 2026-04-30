@@ -13,6 +13,7 @@ class Event extends Model
 
     protected $fillable = [
         'site_id', 'title', 'description', 'date', 'time', 'location', 'map_url', 'is_published',
+        'ward', 'constituency', 'county',
     ];
 
     protected $casts = [

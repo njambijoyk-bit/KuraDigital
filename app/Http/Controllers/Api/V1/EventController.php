@@ -22,6 +22,12 @@ class EventController extends Controller
 
         $query = $site->allEvents();
 
+        // Apply geographic ABAC filters
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership) {
+            $membership->applyGeographicFilters($query, ['ward', 'constituency', 'county']);
+        }
+
         if ($request->has('is_published')) {
             $query->where('is_published', $request->boolean('is_published'));
         }
@@ -65,6 +71,9 @@ class EventController extends Controller
             'location' => ['nullable', 'string', 'max:500'],
             'map_url' => ['nullable', 'url', 'max:500'],
             'is_published' => ['nullable', 'boolean'],
+            'ward' => ['nullable', 'string', 'max:255'],
+            'constituency' => ['nullable', 'string', 'max:255'],
+            'county' => ['nullable', 'string', 'max:255'],
         ]);
 
         $validated['site_id'] = $site->id;
@@ -105,6 +114,9 @@ class EventController extends Controller
             'location' => ['sometimes', 'nullable', 'string', 'max:500'],
             'map_url' => ['sometimes', 'nullable', 'url', 'max:500'],
             'is_published' => ['sometimes', 'boolean'],
+            'ward' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'constituency' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'county' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
         $event->update($validated);
