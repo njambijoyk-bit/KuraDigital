@@ -9,19 +9,19 @@ KuraDigital is a Laravel 10 campaign manager platform with a React frontend. The
 - PHP 8.3+ (from `ppa:ondrej/php`)
 - Composer 2.x
 - Node.js (for frontend, not needed for API-only testing)
-- SQLite (default local DB)
+- MySQL 8 (default) or SQLite
+- `spatie/laravel-permission` package (install via `composer require spatie/laravel-permission` if missing)
 
 ### Setup Steps
 ```bash
-cd /home/ubuntu/repos/KuraDigital
+cd /home/ubuntu/KuraDigital
 composer install --no-interaction
-touch database/database.sqlite
 
-# Ensure .env has:
-# DB_CONNECTION=sqlite
-# APP_KEY set (check with php artisan key:generate --show)
+# For local testing, switch mail to log driver to avoid SMTP errors:
+sed -i 's/MAIL_MAILER=smtp/MAIL_MAILER=log/' .env
 
 php artisan migrate:fresh --seed
+php artisan config:clear
 php artisan serve --host=127.0.0.1 --port=8000 &
 ```
 
@@ -57,6 +57,11 @@ curl -s http://127.0.0.1:8000/api/v1/auth/me \
 ### Campaign Creation
 When creating a campaign, `election_type` must be one of: `presidential`, `gubernatorial`, `senatorial`, `woman_rep`, `parliamentary`, `mca`, `other`. The `level` must be: `national`, `county`, `constituency`, or `ward`.
 
+**Important:** `CampaignPolicy::create` might require the user to have an existing leadership membership (campaign-owner, campaign-director, deputy-campaign-director) or be a `platform-owner`. If new user registration + campaign creation fails with 403, you may need to assign `platform-owner` role via tinker:
+```bash
+php artisan tinker --execute="\App\Models\User::find(1)->assignRole('platform-owner');"
+```
+
 ### Campaign-Scoped Routes
 Routes under `/api/v1/campaigns/{campaign}/...` require the authenticated user to be a member of the campaign. Creating a campaign auto-adds the creator as `campaign-owner`.
 
@@ -65,16 +70,30 @@ To test tenant isolation, register two separate users. User A creates a campaign
 
 ### Team Invite Flow
 1. User A: `POST /campaigns/{id}/invite` with `{email, role, assigned_wards}`
-2. Extract `token` from invitation response
-3. User B: `POST /invitations/accept` with `{token}`
+2. Extract `token` from invitation response (this is the **raw** token)
+3. User B: `POST /invitations/accept` with `{token}` (the raw token from step 2)
 4. User B can now access campaign-scoped routes
 
+**Note:** The mail driver must be set to `log` (not `smtp`) for local testing. Otherwise invite requests fail with SMTP connection errors. The raw token is returned in the API response; the DB stores an HMAC hash.
+
 ### ABAC / Clearance-Level Testing
-Some features (e.g., opponent research) use clearance levels (`public`, `internal`, `confidential`, `restricted`). To test ABAC:
+Some features (e.g., opponent research, media) use clearance levels (`public`, `internal`, `confidential`, `restricted`/`top_secret`). To test ABAC:
 1. Create resources at different clearance levels as `campaign-owner` (has all permissions)
 2. Invite a lower-privilege role (e.g., `research-officer`) — they lack `opponents.view-confidential`
-3. Verify the lower role cannot see/create confidential/restricted items (expect 403)
-4. Verify the lower role CAN see/create public/internal items (expect 200/201)
+3. Set the user's `clearance_level` via DB: `php artisan tinker --execute="\App\Models\User::find(N)->update(['clearance_level' => 'public']);"`
+4. Verify the lower role cannot create items above their clearance (expect 403 with "Cannot classify above your clearance level")
+5. Verify the lower role CAN see/create items at or below their clearance (expect 200/201)
+
+**Registration does not set `clearance_level`** — it defaults to null. You must set it via DB for clearance testing.
+
+### Geographic ABAC Testing
+Some resources (events, projects, contact messages) have geographic fields (ward, constituency, county). To test:
+1. Create a resource with a specific ward/constituency/county
+2. Invite a user with `assigned_wards: ["ward-a"]` (geographic restriction)
+3. User should get 403 when accessing resources in `ward-b`
+4. The 403 message is: "You do not have access to this geographic area."
+
+Geographic ABAC is enforced on `show`, `update`, `destroy` (individual actions), not just `index` (list).
 
 ### Nested Resource Testing
 For resources nested under others (e.g., `/opponents/{id}/research/{id}`), always verify:
@@ -93,6 +112,16 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/campaigns/{id}/media \
   -F "tags[]=tag1"
 ```
 
+### Security Fix Testing Patterns
+
+**Self-role modification:** Owner tries `PUT /campaigns/{id}/members/{own_member_id}` with `{"role": "volunteer"}` → expect 403.
+
+**Email mismatch on invite:** Create invite for `alice@test.com`, accept as `bob@test.com` → expect 403 "different email address".
+
+**Suspended account:** Set `account_status` to `suspended` via DB, then access any campaign endpoint → expect 403 "Your account has been suspended." (not "not a member").
+
+**Members list format:** `GET /campaigns/{id}/members` returns paginated response with `data` array (not `members`).
+
 ## Response Format Notes
 
 - **Audit logs** use Laravel pagination: top-level keys are `current_page`, `data`, `total`, etc. The actual log entries are in the `data` array, not `audit_logs`.
@@ -106,6 +135,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/campaigns/{id}/media \
 - **MFA in dev**: MFA verification accepts any 6-digit code in non-production environments.
 - **Enum sort order in SQLite**: `ORDER BY enum_column DESC` sorts alphabetically, not by logical severity. For example, `threat_level` sorts as `low > high > critical` instead of `critical > high > medium > low`. This might be fixed in the future with a CASE WHEN or numeric column.
 - **Frontend field name alignment**: Frontend forms may use different field names than the API expects. When testing content forms (events, site settings, manifesto), verify field names match the controller's validation rules.
+- **CampaignPolicy::create might be too restrictive**: If new users can't create campaigns, check whether `CampaignPolicy::create` requires existing leadership memberships. This might need a fix to allow first-time campaign creation.
 
 ## Password Requirements
 - Minimum 8 characters
