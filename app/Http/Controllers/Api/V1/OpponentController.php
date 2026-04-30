@@ -45,7 +45,7 @@ class OpponentController extends Controller
         }
 
         $opponents = $query->withCount('research')
-            ->orderByRaw("FIELD(threat_level, 'critical', 'high', 'medium', 'low')")
+            ->orderByRaw("CASE WHEN threat_level = 'critical' THEN 1 WHEN threat_level = 'high' THEN 2 WHEN threat_level = 'medium' THEN 3 WHEN threat_level = 'low' THEN 4 ELSE 5 END")
             ->paginate(20);
 
         return response()->json($opponents);
