@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowDownTrayIcon, HandRaisedIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -17,6 +19,7 @@ export default function VolunteersPage() {
     const [editForm, setEditForm] = useState({ engagement_status: 'new', tags: '', notes: '' });
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const { can } = useCampaignPermissions();
 
     const fetch = async () => {
         setLoading(true);
@@ -107,8 +110,8 @@ export default function VolunteersPage() {
         }},
         { key: 'actions', label: '', render: (r) => (
             <div className="flex items-center space-x-1">
-                <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>
-                <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><TrashIcon className="h-4 w-4" /></button>
+                {can('volunteers.edit') && <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>}
+                {can('volunteers.delete') && <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><TrashIcon className="h-4 w-4" /></button>}
             </div>
         )},
     ];
@@ -127,10 +130,12 @@ export default function VolunteersPage() {
                     </div>
                     <button type="submit" className="btn-outline !py-2 !px-3 text-sm">Search</button>
                 </form>
-                <button onClick={handleExport} className="inline-flex items-center space-x-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm">
-                    <ArrowDownTrayIcon className="h-4 w-4" />
-                    <span>Export CSV</span>
-                </button>
+                <PermissionGate permission="volunteers.export">
+                    <button onClick={handleExport} className="inline-flex items-center space-x-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm">
+                        <ArrowDownTrayIcon className="h-4 w-4" />
+                        <span>Export CSV</span>
+                    </button>
+                </PermissionGate>
             </div>
 
             {items.length === 0 && !loading ? (

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon, NewspaperIcon } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -18,6 +20,7 @@ export default function NewsPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [filter, setFilter] = useState('all');
+    const { can } = useCampaignPermissions();
 
     const fetch = async () => {
         setLoading(true);
@@ -91,8 +94,8 @@ export default function NewsPage() {
         { key: 'created_at', label: 'Created', render: (r) => <span className="text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString('en-KE')}</span> },
         { key: 'actions', label: '', render: (r) => (
             <div className="flex items-center space-x-1">
-                <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>
-                <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><TrashIcon className="h-4 w-4" /></button>
+                {can('news.edit') && <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>}
+                {can('news.delete') && <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><TrashIcon className="h-4 w-4" /></button>}
             </div>
         )},
     ];
@@ -107,12 +110,16 @@ export default function NewsPage() {
                         </button>
                     ))}
                 </div>
-                <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Write Article</button>
+                <PermissionGate permission="news.create">
+                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Write Article</button>
+                </PermissionGate>
             </div>
 
             {items.length === 0 && !loading ? (
                 <EmptyState icon={NewspaperIcon} title="No articles" description="Write campaign news and updates" action={
-                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Write Article</button>
+                    <PermissionGate permission="news.create">
+                        <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Write Article</button>
+                    </PermissionGate>
                 } />
             ) : (
                 <DataTable columns={columns} data={items} loading={loading} />

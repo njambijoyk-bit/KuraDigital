@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -17,6 +19,7 @@ export default function ManifestoPage() {
     const [form, setForm] = useState(emptyForm);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const { can } = useCampaignPermissions();
 
     const fetch = async () => {
         setLoading(true);
@@ -93,8 +96,8 @@ export default function ManifestoPage() {
             key: 'actions', label: '',
             render: (r) => (
                 <div className="flex items-center space-x-1">
-                    <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>
-                    <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><TrashIcon className="h-4 w-4" /></button>
+                    {can('manifesto.edit') && <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>}
+                    {can('manifesto.delete') && <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><TrashIcon className="h-4 w-4" /></button>}
                 </div>
             ),
         },
@@ -104,14 +107,18 @@ export default function ManifestoPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500">{items.length} manifesto pillar{items.length !== 1 ? 's' : ''}</p>
-                <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm">
-                    <PlusIcon className="h-4 w-4 mr-1" /> Add Pillar
-                </button>
+                <PermissionGate permission="manifesto.create">
+                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm">
+                        <PlusIcon className="h-4 w-4 mr-1" /> Add Pillar
+                    </button>
+                </PermissionGate>
             </div>
 
             {items.length === 0 && !loading ? (
                 <EmptyState icon={DocumentTextIcon} title="No manifesto pillars" description="Add your campaign's key policy areas" action={
-                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Pillar</button>
+                    <PermissionGate permission="manifesto.create">
+                        <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Pillar</button>
+                    </PermissionGate>
                 } />
             ) : (
                 <DataTable columns={columns} data={items} loading={loading} />

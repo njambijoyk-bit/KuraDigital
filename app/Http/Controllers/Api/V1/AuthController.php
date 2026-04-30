@@ -137,17 +137,21 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $this->formatUser($user),
-            'campaigns' => $user->activeMemberships->map(fn ($m) => [
-                'id' => $m->campaign->id,
-                'name' => $m->campaign->name,
-                'slug' => $m->campaign->slug,
-                'level' => $m->campaign->level,
-                'role' => $m->campaign->id,
-                'visibility_scope' => $m->visibility_scope,
-                'assigned_wards' => $m->assigned_wards,
-                'assigned_constituencies' => $m->assigned_constituencies,
-                'assigned_counties' => $m->assigned_counties,
-            ]),
+            'campaigns' => $user->activeMemberships->map(function ($m) {
+                $role = \Spatie\Permission\Models\Role::findByName($m->role, 'web');
+                return [
+                    'id' => $m->campaign->id,
+                    'name' => $m->campaign->name,
+                    'slug' => $m->campaign->slug,
+                    'level' => $m->campaign->level,
+                    'role' => $m->role,
+                    'permissions' => $role->permissions->pluck('name'),
+                    'visibility_scope' => $m->visibility_scope,
+                    'assigned_wards' => $m->assigned_wards,
+                    'assigned_constituencies' => $m->assigned_constituencies,
+                    'assigned_counties' => $m->assigned_counties,
+                ];
+            }),
             'roles' => $user->getRoleNames(),
             'permissions' => $user->getAllPermissions()->pluck('name'),
         ]);

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 
@@ -16,6 +18,7 @@ export default function GalleryPage() {
     const [form, setForm] = useState(emptyForm);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const { can } = useCampaignPermissions();
 
     const fetch = async () => {
         setLoading(true);
@@ -72,12 +75,16 @@ export default function GalleryPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500">{items.length} item{items.length !== 1 ? 's' : ''}</p>
-                <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Photo</button>
+                <PermissionGate permission="gallery.create">
+                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Photo</button>
+                </PermissionGate>
             </div>
 
             {items.length === 0 ? (
                 <EmptyState icon={PhotoIcon} title="Gallery is empty" description="Add campaign photos and images" action={
-                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Photo</button>
+                    <PermissionGate permission="gallery.create">
+                        <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Photo</button>
+                    </PermissionGate>
                 } />
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -92,8 +99,8 @@ export default function GalleryPage() {
                                     </div>
                                 )}
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                    <button onClick={() => openEdit(item)} className="p-2 bg-white rounded-full shadow-md mr-2"><PencilIcon className="h-4 w-4 text-gray-700" /></button>
-                                    <button onClick={() => handleDelete(item.id)} className="p-2 bg-white rounded-full shadow-md"><TrashIcon className="h-4 w-4 text-red-500" /></button>
+                                    {can('gallery.edit') && <button onClick={() => openEdit(item)} className="p-2 bg-white rounded-full shadow-md mr-2"><PencilIcon className="h-4 w-4 text-gray-700" /></button>}
+                                    {can('gallery.delete') && <button onClick={() => handleDelete(item.id)} className="p-2 bg-white rounded-full shadow-md"><TrashIcon className="h-4 w-4 text-red-500" /></button>}
                                 </div>
                             </div>
                             <div className="p-3">

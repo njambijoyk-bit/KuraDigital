@@ -12,6 +12,8 @@ import {
     ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -67,6 +69,7 @@ export default function OpponentsPage() {
     const [researchForm, setResearchForm] = useState(emptyResearchForm);
     const [researchSubmitting, setResearchSubmitting] = useState(false);
     const [researchError, setResearchError] = useState(null);
+    const { can } = useCampaignPermissions();
 
     const fetchOpponents = useCallback(async () => {
         setLoading(true);
@@ -220,9 +223,9 @@ export default function OpponentsPage() {
                             </div>
                         </div>
                         <div className="flex space-x-2">
-                            <button onClick={() => openEdit(selectedOpponent)} className="btn-secondary !py-2 !px-3 text-sm">
+                            {can('opponents.edit') && <button onClick={() => openEdit(selectedOpponent)} className="btn-secondary !py-2 !px-3 text-sm">
                                 <PencilIcon className="h-4 w-4 mr-1" /> Edit
-                            </button>
+                            </button>}
                         </div>
                     </div>
 
@@ -271,9 +274,11 @@ export default function OpponentsPage() {
                     <h3 className="text-lg font-heading font-semibold text-gray-900">
                         Research Notes <span className="text-sm font-normal text-gray-400">({research.length})</span>
                     </h3>
-                    <button onClick={openResearchCreate} className="btn-primary !py-2 !px-4 text-sm">
-                        <PlusIcon className="h-4 w-4 mr-1" /> Add Research
-                    </button>
+                    <PermissionGate permission="opponents.add-research">
+                        <button onClick={openResearchCreate} className="btn-primary !py-2 !px-4 text-sm">
+                            <PlusIcon className="h-4 w-4 mr-1" /> Add Research
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {researchLoading ? (
@@ -286,9 +291,11 @@ export default function OpponentsPage() {
                         title="No research yet"
                         description="Add research notes, intel, and observations about this opponent."
                         action={
-                            <button onClick={openResearchCreate} className="btn-primary !py-2 !px-4 text-sm">
-                                <PlusIcon className="h-4 w-4 mr-1" /> Add Research
-                            </button>
+                            <PermissionGate permission="opponents.add-research">
+                                <button onClick={openResearchCreate} className="btn-primary !py-2 !px-4 text-sm">
+                                    <PlusIcon className="h-4 w-4 mr-1" /> Add Research
+                                </button>
+                            </PermissionGate>
                         }
                     />
                 ) : (
@@ -312,12 +319,12 @@ export default function OpponentsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-1 ml-3 flex-shrink-0">
-                                        <button onClick={() => openResearchEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded">
+                                        {can('opponents.edit-research') && <button onClick={() => openResearchEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded">
                                             <PencilIcon className="h-4 w-4" />
-                                        </button>
-                                        <button onClick={() => handleResearchDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded">
+                                        </button>}
+                                        {can('opponents.delete-research') && <button onClick={() => handleResearchDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded">
                                             <TrashIcon className="h-4 w-4" />
-                                        </button>
+                                        </button>}
                                     </div>
                                 </div>
                             </div>
@@ -404,12 +411,12 @@ export default function OpponentsPage() {
                     <button onClick={(e) => { e.stopPropagation(); openOpponentDetail(r); }} className="p-1.5 text-gray-400 hover:text-blue-600 rounded" title="View research">
                         <DocumentMagnifyingGlassIcon className="h-4 w-4" />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); openEdit(r); }} className="p-1.5 text-gray-400 hover:text-primary-600 rounded">
+                    {can('opponents.edit') && <button onClick={(e) => { e.stopPropagation(); openEdit(r); }} className="p-1.5 text-gray-400 hover:text-primary-600 rounded">
                         <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDelete(r.id); }} className="p-1.5 text-gray-400 hover:text-red-500 rounded">
+                    </button>}
+                    {can('opponents.delete') && <button onClick={(e) => { e.stopPropagation(); handleDelete(r.id); }} className="p-1.5 text-gray-400 hover:text-red-500 rounded">
                         <TrashIcon className="h-4 w-4" />
-                    </button>
+                    </button>}
                 </div>
             ),
         },
@@ -441,9 +448,11 @@ export default function OpponentsPage() {
                     <option value="">All threat levels</option>
                     {THREAT_LEVELS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                 </select>
-                <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm whitespace-nowrap">
-                    <PlusIcon className="h-4 w-4 mr-1" /> Add Opponent
-                </button>
+                <PermissionGate permission="opponents.create">
+                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm whitespace-nowrap">
+                        <PlusIcon className="h-4 w-4 mr-1" /> Add Opponent
+                    </button>
+                </PermissionGate>
             </div>
 
             {/* Table */}
@@ -453,9 +462,11 @@ export default function OpponentsPage() {
                     title="No opponents tracked"
                     description="Start building your opponent intelligence by adding competitors."
                     action={
-                        <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm">
-                            <PlusIcon className="h-4 w-4 mr-1" /> Add Opponent
-                        </button>
+                        <PermissionGate permission="opponents.create">
+                            <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm">
+                                <PlusIcon className="h-4 w-4 mr-1" /> Add Opponent
+                            </button>
+                        </PermissionGate>
                     }
                 />
             ) : (

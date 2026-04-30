@@ -4,6 +4,8 @@ import api from '../../lib/api';
 const useAuthStore = create((set, get) => ({
     user: JSON.parse(localStorage.getItem('kura_user') || 'null'),
     token: localStorage.getItem('kura_token') || null,
+    campaigns: JSON.parse(localStorage.getItem('kura_campaigns') || '[]'),
+    globalRoles: JSON.parse(localStorage.getItem('kura_global_roles') || '[]'),
     loading: false,
     error: null,
 
@@ -55,18 +57,29 @@ const useAuthStore = create((set, get) => ({
         }
         localStorage.removeItem('kura_token');
         localStorage.removeItem('kura_user');
-        set({ token: null, user: null });
+        localStorage.removeItem('kura_campaigns');
+        localStorage.removeItem('kura_global_roles');
+        set({ token: null, user: null, campaigns: [], globalRoles: [] });
     },
 
     fetchMe: async () => {
         try {
             const { data } = await api.get('/auth/me');
             const user = data.user;
+            const campaigns = data.campaigns || [];
+            const globalRoles = data.roles || [];
             localStorage.setItem('kura_user', JSON.stringify(user));
-            set({ user });
+            localStorage.setItem('kura_campaigns', JSON.stringify(campaigns));
+            localStorage.setItem('kura_global_roles', JSON.stringify(globalRoles));
+            set({ user, campaigns, globalRoles });
         } catch {
             // silent — user will be redirected on 401
         }
+    },
+
+    getCampaignMembership: (campaignId) => {
+        const id = parseInt(campaignId, 10);
+        return get().campaigns.find((c) => c.id === id) || null;
     },
 
     clearError: () => set({ error: null }),
