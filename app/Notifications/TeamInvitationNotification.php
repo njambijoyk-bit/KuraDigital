@@ -14,6 +14,7 @@ class TeamInvitationNotification extends Notification implements ShouldQueue
 
     public function __construct(
         private TeamInvitation $invitation,
+        private ?string $rawToken = null,
     ) {}
 
     public function via(object $notifiable): array
@@ -25,8 +26,9 @@ class TeamInvitationNotification extends Notification implements ShouldQueue
     {
         $campaign = $this->invitation->campaign;
         $inviter = $this->invitation->inviter;
+        $token = $this->rawToken ?? $this->invitation->token;
         $acceptUrl = config('app.frontend_url', config('app.url'))
-            . '/invite/accept?token=' . $this->invitation->token;
+            . '/invite/accept?token=' . $token;
 
         return (new MailMessage)
             ->subject("You're invited to join {$campaign->name} on KuraDigital")
