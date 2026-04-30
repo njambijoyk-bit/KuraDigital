@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use App\Services\TotpService;
 
 class AuthController extends Controller
 {
@@ -102,9 +103,9 @@ class AuthController extends Controller
 
         $user = User::findOrFail($userId);
 
-        // TODO: Verify OTP against Africa's Talking or TOTP
-        // For now, accept any 6-digit code in development
-        if (app()->environment('production') && $validated['otp'] !== '000000') {
+        $totp = new TotpService();
+
+        if (!$user->mfa_secret || !$totp->verify($user->mfa_secret, $validated['otp'])) {
             return response()->json(['message' => 'Invalid OTP.'], 400);
         }
 
@@ -186,14 +187,60 @@ class AuthController extends Controller
         return response()->json(['message' => 'Password changed.']);
     }
 
-    public function toggleMfa(Request $request): JsonResponse
+    public function setupMfa(Request $request): JsonResponse
     {
         $user = $request->user();
-        $user->update(['mfa_enabled' => !$user->mfa_enabled]);
+        $totp = new TotpService();
+
+        $secret = $totp->generateSecret();
+        $user->update(['mfa_secret' => $secret]);
 
         return response()->json([
-            'message' => $user->mfa_enabled ? 'MFA enabled.' : 'MFA disabled.',
-            'mfa_enabled' => $user->mfa_enabled,
+            'message' => 'Scan the QR code with your authenticator app, then confirm with a code.',
+            'secret' => $secret,
+            'provisioning_uri' => $totp->provisioningUri($secret, $user->email),
+        ]);
+    }
+
+    public function confirmMfa(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'otp' => ['required', 'string', 'size:6'],
+        ]);
+
+        $user = $request->user();
+        $totp = new TotpService();
+
+        if (!$user->mfa_secret || !$totp->verify($user->mfa_secret, $validated['otp'])) {
+            return response()->json(['message' => 'Invalid code. Please try again.'], 400);
+        }
+
+        $user->update(['mfa_enabled' => true]);
+
+        return response()->json([
+            'message' => 'MFA enabled successfully.',
+            'mfa_enabled' => true,
+        ]);
+    }
+
+    public function disableMfa(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'otp' => ['required', 'string', 'size:6'],
+        ]);
+
+        $user = $request->user();
+        $totp = new TotpService();
+
+        if (!$user->mfa_secret || !$totp->verify($user->mfa_secret, $validated['otp'])) {
+            return response()->json(['message' => 'Invalid code.'], 400);
+        }
+
+        $user->update(['mfa_enabled' => false, 'mfa_secret' => null]);
+
+        return response()->json([
+            'message' => 'MFA disabled.',
+            'mfa_enabled' => false,
         ]);
     }
 

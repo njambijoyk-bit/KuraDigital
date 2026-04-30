@@ -56,7 +56,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
         Route::put('/auth/password', [AuthController::class, 'changePassword']);
-        Route::post('/auth/mfa/toggle', [AuthController::class, 'toggleMfa']);
+        Route::post('/auth/mfa/setup', [AuthController::class, 'setupMfa']);
+        Route::post('/auth/mfa/confirm', [AuthController::class, 'confirmMfa']);
+        Route::post('/auth/mfa/disable', [AuthController::class, 'disableMfa']);
 
         // Campaigns (list / create — no campaign context needed)
         Route::get('/campaigns', [CampaignController::class, 'index']);
