@@ -8,6 +8,8 @@ import {
     EnvelopeIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -35,6 +37,7 @@ export default function TeamPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [tab, setTab] = useState('members');
+    const { can } = useCampaignPermissions();
 
     const fetch = async () => {
         setLoading(true);
@@ -154,12 +157,12 @@ export default function TeamPage() {
             key: 'actions', label: '',
             render: (r) => (
                 <div className="flex items-center space-x-1">
-                    <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded transition-colors">
+                    {can('team.assign-roles') && <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded transition-colors">
                         <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => handleDeactivate(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors">
+                    </button>}
+                    {can('team.deactivate') && <button onClick={() => handleDeactivate(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors">
                         <TrashIcon className="h-4 w-4" />
-                    </button>
+                    </button>}
                 </div>
             ),
         },
@@ -182,10 +185,12 @@ export default function TeamPage() {
                         Pending Invites ({invitations.length})
                     </button>
                 </div>
-                <button onClick={() => { setShowInvite(true); setError(null); }} className="btn-primary !py-2 !px-4 text-sm">
-                    <PlusIcon className="h-4 w-4 mr-1" />
-                    Invite
-                </button>
+                <PermissionGate permission="team.invite">
+                    <button onClick={() => { setShowInvite(true); setError(null); }} className="btn-primary !py-2 !px-4 text-sm">
+                        <PlusIcon className="h-4 w-4 mr-1" />
+                        Invite
+                    </button>
+                </PermissionGate>
             </div>
 
             {tab === 'members' ? (

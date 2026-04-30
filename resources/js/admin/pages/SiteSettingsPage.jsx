@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { CogIcon } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 
 export default function SiteSettingsPage() {
     const { campaignId } = useParams();
@@ -9,6 +11,7 @@ export default function SiteSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
+    const { can } = useCampaignPermissions();
     const [form, setForm] = useState({
         candidate_name: '', slug: '', slogan: '', slogan_sw: '',
         bio_summary: '', bio_summary_sw: '', primary_color: '#16a34a',
@@ -196,9 +199,11 @@ export default function SiteSettingsPage() {
                 </div>
 
                 <div className="flex justify-end">
-                    <button type="submit" disabled={saving} className="btn-primary !py-2.5 !px-6 disabled:opacity-50">
-                        {saving ? 'Saving...' : site ? 'Update Settings' : 'Create Site'}
-                    </button>
+                    <PermissionGate permission="site.edit">
+                        <button type="submit" disabled={saving} className="btn-primary !py-2.5 !px-6 disabled:opacity-50">
+                            {saving ? 'Saving...' : site ? 'Update Settings' : 'Create Site'}
+                        </button>
+                    </PermissionGate>
                 </div>
             </form>
         </div>

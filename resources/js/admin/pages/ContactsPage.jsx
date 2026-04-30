@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowDownTrayIcon, EnvelopeIcon, EyeIcon, TrashIcon, ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -14,6 +16,7 @@ export default function ContactsPage() {
     const [showDetail, setShowDetail] = useState(null);
     const [response, setResponse] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const { can } = useCampaignPermissions();
 
     const fetch = async () => {
         setLoading(true);
@@ -101,8 +104,8 @@ export default function ContactsPage() {
         { key: 'actions', label: '', render: (r) => (
             <div className="flex items-center space-x-1">
                 <button onClick={() => openDetail(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded" title="View"><EyeIcon className="h-4 w-4" /></button>
-                {!r.is_archived && <button onClick={() => handleArchive(r.id)} className="p-1.5 text-gray-400 hover:text-yellow-600 rounded" title="Archive"><EnvelopeIcon className="h-4 w-4" /></button>}
-                <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded" title="Delete"><TrashIcon className="h-4 w-4" /></button>
+                {can('contacts.respond') && !r.is_archived && <button onClick={() => handleArchive(r.id)} className="p-1.5 text-gray-400 hover:text-yellow-600 rounded" title="Archive"><EnvelopeIcon className="h-4 w-4" /></button>}
+                {can('contacts.archive') && <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded" title="Delete"><TrashIcon className="h-4 w-4" /></button>}
             </div>
         )},
     ];
@@ -117,10 +120,12 @@ export default function ContactsPage() {
                         </button>
                     ))}
                 </div>
-                <button onClick={handleExport} className="inline-flex items-center space-x-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm">
-                    <ArrowDownTrayIcon className="h-4 w-4" />
-                    <span>Export CSV</span>
-                </button>
+                <PermissionGate permission="contacts.export">
+                    <button onClick={handleExport} className="inline-flex items-center space-x-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm">
+                        <ArrowDownTrayIcon className="h-4 w-4" />
+                        <span>Export CSV</span>
+                    </button>
+                </PermissionGate>
             </div>
 
             {items.length === 0 && !loading ? (

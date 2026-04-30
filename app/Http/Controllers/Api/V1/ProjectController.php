@@ -22,6 +22,12 @@ class ProjectController extends Controller
 
         $query = $site->allProjects();
 
+        // Apply geographic ABAC filters
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership) {
+            $membership->applyGeographicFilters($query, ['ward', 'constituency', 'county']);
+        }
+
         if ($request->has('status')) {
             $query->where('status', $request->input('status'));
         }
@@ -61,6 +67,9 @@ class ProjectController extends Controller
             'image_url' => ['nullable', 'string', 'max:500'],
             'impact' => ['nullable', 'string', 'max:500'],
             'sort_order' => ['nullable', 'integer'],
+            'ward' => ['nullable', 'string', 'max:255'],
+            'constituency' => ['nullable', 'string', 'max:255'],
+            'county' => ['nullable', 'string', 'max:255'],
         ]);
 
         $validated['site_id'] = $site->id;
@@ -101,6 +110,9 @@ class ProjectController extends Controller
             'image_url' => ['sometimes', 'nullable', 'string', 'max:500'],
             'impact' => ['sometimes', 'nullable', 'string', 'max:500'],
             'sort_order' => ['sometimes', 'integer'],
+            'ward' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'constituency' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'county' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
         $project->update($validated);

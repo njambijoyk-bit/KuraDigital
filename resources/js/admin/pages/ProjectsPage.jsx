@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon, FolderIcon } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -18,6 +20,7 @@ export default function ProjectsPage() {
     const [form, setForm] = useState(emptyForm);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const { can } = useCampaignPermissions();
 
     const fetch = async () => {
         setLoading(true);
@@ -85,8 +88,8 @@ export default function ProjectsPage() {
         { key: 'location', label: 'Location', render: (r) => <span className="text-gray-500 text-sm">{r.location || '—'}</span> },
         { key: 'actions', label: '', render: (r) => (
             <div className="flex items-center space-x-1">
-                <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>
-                <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><TrashIcon className="h-4 w-4" /></button>
+                {can('projects.edit') && <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>}
+                {can('projects.delete') && <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><TrashIcon className="h-4 w-4" /></button>}
             </div>
         )},
     ];
@@ -95,12 +98,16 @@ export default function ProjectsPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500">{items.length} project{items.length !== 1 ? 's' : ''}</p>
-                <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Project</button>
+                <PermissionGate permission="projects.create">
+                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Project</button>
+                </PermissionGate>
             </div>
 
             {items.length === 0 && !loading ? (
                 <EmptyState icon={FolderIcon} title="No projects" description="Track campaign development projects" action={
-                    <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Project</button>
+                    <PermissionGate permission="projects.create">
+                        <button onClick={openCreate} className="btn-primary !py-2 !px-4 text-sm"><PlusIcon className="h-4 w-4 mr-1" /> Add Project</button>
+                    </PermissionGate>
                 } />
             ) : (
                 <DataTable columns={columns} data={items} loading={loading} />

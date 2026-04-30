@@ -7,9 +7,11 @@ use App\Models\Campaign;
 use App\Models\CampaignMember;
 use App\Models\TeamInvitation;
 use App\Models\User;
+use App\Notifications\TeamInvitationNotification;
 use App\Services\RoleHierarchy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Str;
 
 class TeamController extends Controller
@@ -66,7 +68,12 @@ class TeamController extends Controller
             'expires_at' => now()->addDays(7),
         ]);
 
-        // TODO: Send invitation via email/SMS using Africa's Talking
+        // Send invitation notification
+        if ($invitation->email) {
+            (new AnonymousNotifiable)
+                ->route('mail', $invitation->email)
+                ->notify(new TeamInvitationNotification($invitation));
+        }
 
         return response()->json([
             'message' => 'Invitation sent.',

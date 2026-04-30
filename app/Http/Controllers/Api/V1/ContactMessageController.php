@@ -23,6 +23,12 @@ class ContactMessageController extends Controller
 
         $query = $site->contactMessages();
 
+        // Apply geographic ABAC filters
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership) {
+            $membership->applyGeographicFilters($query, ['ward', 'constituency', 'county']);
+        }
+
         if ($request->has('is_read')) {
             $query->where('is_read', $request->boolean('is_read'));
         }
@@ -115,6 +121,12 @@ class ContactMessageController extends Controller
         }
 
         $query = $site->contactMessages();
+
+        // Apply geographic ABAC filters for exports too
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership) {
+            $membership->applyGeographicFilters($query, ['ward', 'constituency', 'county']);
+        }
 
         if ($request->has('is_archived')) {
             $query->where('is_archived', $request->boolean('is_archived'));

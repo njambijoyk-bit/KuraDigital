@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
+import RequirePermission from './components/RequirePermission';
 import AdminLayout from './components/AdminLayout';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -55,18 +56,18 @@ export default function AdminApp() {
                     }
                 >
                     <Route index element={<DashboardPage />} />
-                    <Route path="team" element={<TeamPage />} />
-                    <Route path="site" element={<SiteSettingsPage />} />
-                    <Route path="manifesto" element={<ManifestoPage />} />
-                    <Route path="events" element={<EventsPage />} />
-                    <Route path="news" element={<NewsPage />} />
-                    <Route path="gallery" element={<GalleryPage />} />
-                    <Route path="projects" element={<ProjectsPage />} />
-                    <Route path="volunteers" element={<VolunteersPage />} />
-                    <Route path="contacts" element={<ContactsPage />} />
-                    <Route path="opponents" element={<OpponentsPage />} />
-                    <Route path="media" element={<MediaPage />} />
-                    <Route path="audit" element={<AuditLogPage />} />
+                    <Route path="team" element={<RequirePermission permission="team.view"><TeamPage /></RequirePermission>} />
+                    <Route path="site" element={<RequirePermission permission="site.view"><SiteSettingsPage /></RequirePermission>} />
+                    <Route path="manifesto" element={<RequirePermission permission="manifesto.view"><ManifestoPage /></RequirePermission>} />
+                    <Route path="events" element={<RequirePermission permission="events.view"><EventsPage /></RequirePermission>} />
+                    <Route path="news" element={<RequirePermission permission="news.view"><NewsPage /></RequirePermission>} />
+                    <Route path="gallery" element={<RequirePermission permission="gallery.view"><GalleryPage /></RequirePermission>} />
+                    <Route path="projects" element={<RequirePermission permission="projects.view"><ProjectsPage /></RequirePermission>} />
+                    <Route path="volunteers" element={<RequirePermission permission="volunteers.view"><VolunteersPage /></RequirePermission>} />
+                    <Route path="contacts" element={<RequirePermission permission="contacts.view"><ContactsPage /></RequirePermission>} />
+                    <Route path="opponents" element={<RequirePermission permission="opponents.view"><OpponentsPage /></RequirePermission>} />
+                    <Route path="media" element={<RequirePermission permission="media.view"><MediaPage /></RequirePermission>} />
+                    <Route path="audit" element={<RequirePermission permission="audit.view"><AuditLogPage /></RequirePermission>} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/admin" replace />} />

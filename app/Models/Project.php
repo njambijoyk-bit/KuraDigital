@@ -13,6 +13,7 @@ class Project extends Model
 
     protected $fillable = [
         'site_id', 'title', 'description', 'category', 'status', 'image_url', 'impact', 'sort_order',
+        'ward', 'constituency', 'county',
     ];
 
     public function site(): BelongsTo

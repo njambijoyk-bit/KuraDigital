@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { PlusIcon, TrashIcon, PencilIcon, FilmIcon, DocumentIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
+import PermissionGate from '../components/PermissionGate';
+import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 
@@ -15,6 +17,7 @@ export default function MediaPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const fileRef = useRef(null);
+    const { can } = useCampaignPermissions();
 
     const fetch = async () => {
         setLoading(true);
@@ -93,18 +96,22 @@ export default function MediaPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500">{items.length} file{items.length !== 1 ? 's' : ''}</p>
-                <div>
-                    <input ref={fileRef} type="file" multiple onChange={handleUpload} className="hidden" id="media-upload" />
-                    <label htmlFor="media-upload" className={`btn-primary !py-2 !px-4 text-sm cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                        <PlusIcon className="h-4 w-4 mr-1" />
-                        {uploading ? 'Uploading...' : 'Upload Files'}
-                    </label>
-                </div>
+                <PermissionGate permission="media.upload">
+                    <div>
+                        <input ref={fileRef} type="file" multiple onChange={handleUpload} className="hidden" id="media-upload" />
+                        <label htmlFor="media-upload" className={`btn-primary !py-2 !px-4 text-sm cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <PlusIcon className="h-4 w-4 mr-1" />
+                            {uploading ? 'Uploading...' : 'Upload Files'}
+                        </label>
+                    </div>
+                </PermissionGate>
             </div>
 
             {items.length === 0 ? (
                 <EmptyState icon={FilmIcon} title="Media library is empty" description="Upload images, videos, and documents for your campaign" action={
-                    <label htmlFor="media-upload" className="btn-primary !py-2 !px-4 text-sm cursor-pointer"><PlusIcon className="h-4 w-4 mr-1" /> Upload Files</label>
+                    <PermissionGate permission="media.upload">
+                        <label htmlFor="media-upload" className="btn-primary !py-2 !px-4 text-sm cursor-pointer"><PlusIcon className="h-4 w-4 mr-1" /> Upload Files</label>
+                    </PermissionGate>
                 } />
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -122,8 +129,8 @@ export default function MediaPage() {
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                        <button onClick={() => openEdit(item)} className="p-2 bg-white rounded-full shadow-md mr-2"><PencilIcon className="h-4 w-4 text-gray-700" /></button>
-                                        <button onClick={() => handleDelete(item.id)} className="p-2 bg-white rounded-full shadow-md"><TrashIcon className="h-4 w-4 text-red-500" /></button>
+                                        {can('media.manage') && <button onClick={() => openEdit(item)} className="p-2 bg-white rounded-full shadow-md mr-2"><PencilIcon className="h-4 w-4 text-gray-700" /></button>}
+                                        {can('media.delete') && <button onClick={() => handleDelete(item.id)} className="p-2 bg-white rounded-full shadow-md"><TrashIcon className="h-4 w-4 text-red-500" /></button>}
                                     </div>
                                 </div>
                                 <div className="p-2">
