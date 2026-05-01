@@ -95,6 +95,11 @@ class Campaign extends Model
         return $this->hasMany(Opponent::class);
     }
 
+    public function voters(): HasMany
+    {
+        return $this->hasMany(Voter::class);
+    }
+
     public function ancestors(): array
     {
         $ancestors = [];

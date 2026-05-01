@@ -13,6 +13,7 @@ use App\Models\Media;
 use App\Models\NewsArticle;
 use App\Models\Project;
 use App\Models\Site;
+use App\Models\Voter;
 use App\Models\Volunteer;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CampaignMemberPolicy;
@@ -25,6 +26,7 @@ use App\Policies\MediaPolicy;
 use App\Policies\NewsArticlePolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\SitePolicy;
+use App\Policies\VoterPolicy;
 use App\Policies\VolunteerPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
@@ -42,6 +44,7 @@ class AuthServiceProvider extends ServiceProvider
         GalleryItem::class => GalleryItemPolicy::class,
         Project::class => ProjectPolicy::class,
         Volunteer::class => VolunteerPolicy::class,
+        Voter::class => VoterPolicy::class,
         ContactMessage::class => ContactMessagePolicy::class,
     ];
 

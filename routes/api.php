@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\OpponentController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\SiteSettingsController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\VoterController;
 use App\Http\Controllers\Api\V1\VolunteerController;
 use Illuminate\Support\Facades\Route;
 
@@ -149,6 +150,18 @@ Route::prefix('v1')->group(function () {
             Route::get('/contacts/{message}', [ContactMessageController::class, 'show']);
             Route::put('/contacts/{message}', [ContactMessageController::class, 'update']);
             Route::delete('/contacts/{message}', [ContactMessageController::class, 'destroy']);
+
+            // Voters
+            Route::get('/voters', [VoterController::class, 'index']);
+            Route::post('/voters', [VoterController::class, 'store']);
+            Route::get('/voters/stats', [VoterController::class, 'stats']);
+            Route::get('/voters/export', [VoterController::class, 'export']);
+            Route::post('/voters/import', [VoterController::class, 'import']);
+            Route::post('/voters/bulk-tag', [VoterController::class, 'bulkTag']);
+            Route::post('/voters/bulk-status', [VoterController::class, 'bulkUpdateStatus']);
+            Route::get('/voters/{voter}', [VoterController::class, 'show']);
+            Route::put('/voters/{voter}', [VoterController::class, 'update']);
+            Route::delete('/voters/{voter}', [VoterController::class, 'destroy']);
 
             // Opponents
             Route::get('/opponents', [OpponentController::class, 'index']);
