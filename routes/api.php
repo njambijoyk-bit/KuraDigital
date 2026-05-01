@@ -19,6 +19,8 @@ use App\Http\Controllers\Api\V1\VolunteerController;
 use App\Http\Controllers\Api\V1\FieldAgentController;
 use App\Http\Controllers\Api\V1\SurveyController;
 use App\Http\Controllers\Api\V1\CheckInController;
+use App\Http\Controllers\Api\V1\StrategyController;
+use App\Http\Controllers\Api\V1\MessagingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -202,6 +204,46 @@ Route::prefix('v1')->group(function () {
             // Check-ins
             Route::get('/check-ins', [CheckInController::class, 'index']);
             Route::post('/check-ins', [CheckInController::class, 'store']);
+
+            // --- Phase 1E: Strategy ---
+
+            // Strategy notes
+            Route::get('/strategy/notes', [StrategyController::class, 'notesIndex']);
+            Route::post('/strategy/notes', [StrategyController::class, 'notesStore']);
+            Route::get('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesShow']);
+            Route::put('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesUpdate']);
+            Route::delete('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesDestroy']);
+
+            // Ward targets
+            Route::get('/strategy/ward-targets', [StrategyController::class, 'wardTargetsIndex']);
+            Route::post('/strategy/ward-targets', [StrategyController::class, 'wardTargetsStore']);
+            Route::put('/strategy/ward-targets/{wardTarget}', [StrategyController::class, 'wardTargetsUpdate']);
+            Route::delete('/strategy/ward-targets/{wardTarget}', [StrategyController::class, 'wardTargetsDestroy']);
+
+            // Polls
+            Route::get('/strategy/polls', [StrategyController::class, 'pollsIndex']);
+            Route::post('/strategy/polls', [StrategyController::class, 'pollsStore']);
+            Route::get('/strategy/polls/{poll}', [StrategyController::class, 'pollsShow']);
+            Route::delete('/strategy/polls/{poll}', [StrategyController::class, 'pollsDestroy']);
+
+            // --- Phase 1F: Messaging ---
+
+            // Message templates
+            Route::get('/messaging/templates', [MessagingController::class, 'templatesIndex']);
+            Route::post('/messaging/templates', [MessagingController::class, 'templatesStore']);
+            Route::get('/messaging/templates/{template}', [MessagingController::class, 'templatesShow']);
+            Route::put('/messaging/templates/{template}', [MessagingController::class, 'templatesUpdate']);
+            Route::delete('/messaging/templates/{template}', [MessagingController::class, 'templatesDestroy']);
+            Route::post('/messaging/templates/{template}/approve', [MessagingController::class, 'templatesApprove']);
+
+            // Message campaigns
+            Route::get('/messaging/campaigns', [MessagingController::class, 'campaignsIndex']);
+            Route::post('/messaging/campaigns', [MessagingController::class, 'campaignsStore']);
+            Route::get('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsShow']);
+            Route::put('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsUpdate']);
+            Route::delete('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsDestroy']);
+            Route::post('/messaging/campaigns/{messageCampaign}/approve', [MessagingController::class, 'campaignsApprove']);
+            Route::post('/messaging/campaigns/{messageCampaign}/send', [MessagingController::class, 'campaignsSend']);
         });
     });
 });

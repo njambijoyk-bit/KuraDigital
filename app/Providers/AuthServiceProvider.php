@@ -18,6 +18,11 @@ use App\Models\Volunteer;
 use App\Models\FieldAgent;
 use App\Models\Survey;
 use App\Models\CheckIn;
+use App\Models\StrategyNote;
+use App\Models\WardTarget;
+use App\Models\Poll;
+use App\Models\MessageTemplate;
+use App\Models\MessageCampaign;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CampaignMemberPolicy;
 use App\Policies\CampaignPolicy;
@@ -34,6 +39,11 @@ use App\Policies\VolunteerPolicy;
 use App\Policies\FieldAgentPolicy;
 use App\Policies\SurveyPolicy;
 use App\Policies\CheckInPolicy;
+use App\Policies\StrategyNotePolicy;
+use App\Policies\WardTargetPolicy;
+use App\Policies\PollPolicy;
+use App\Policies\MessageTemplatePolicy;
+use App\Policies\MessageCampaignPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -55,6 +65,11 @@ class AuthServiceProvider extends ServiceProvider
         FieldAgent::class => FieldAgentPolicy::class,
         Survey::class => SurveyPolicy::class,
         CheckIn::class => CheckInPolicy::class,
+        StrategyNote::class => StrategyNotePolicy::class,
+        WardTarget::class => WardTargetPolicy::class,
+        Poll::class => PollPolicy::class,
+        MessageTemplate::class => MessageTemplatePolicy::class,
+        MessageCampaign::class => MessageCampaignPolicy::class,
     ];
 
     public function boot(): void
