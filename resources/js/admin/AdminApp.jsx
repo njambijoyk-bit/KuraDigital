@@ -25,6 +25,8 @@ const FieldOpsPage = lazy(() => import('./pages/FieldOpsPage'));
 const FieldReportsPage = lazy(() => import('./pages/FieldReportsPage'));
 const CaptureReportPage = lazy(() => import('./pages/CaptureReportPage'));
 const SurveysPage = lazy(() => import('./pages/SurveysPage'));
+const StrategyPage = lazy(() => import('./pages/StrategyPage'));
+const MessagingPage = lazy(() => import('./pages/MessagingPage'));
 
 function Loading() {
     return (
@@ -76,6 +78,8 @@ export default function AdminApp() {
                     <Route path="field-reports" element={<RequirePermission permission="field.view-reports"><FieldReportsPage /></RequirePermission>} />
                     <Route path="capture-report" element={<RequirePermission permission="field.create-reports"><CaptureReportPage /></RequirePermission>} />
                     <Route path="surveys" element={<RequirePermission permission="field.view"><SurveysPage /></RequirePermission>} />
+                    <Route path="strategy" element={<RequirePermission permission="strategy.view"><StrategyPage /></RequirePermission>} />
+                    <Route path="messaging" element={<RequirePermission permission="messaging.view"><MessagingPage /></RequirePermission>} />
                     <Route path="media" element={<RequirePermission permission="media.view"><MediaPage /></RequirePermission>} />
                     <Route path="audit" element={<RequirePermission permission="audit.view"><AuditLogPage /></RequirePermission>} />
                 </Route>
