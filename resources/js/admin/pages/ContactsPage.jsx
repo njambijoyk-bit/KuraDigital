@@ -170,25 +170,27 @@ export default function ContactsPage() {
                             </div>
                         )}
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                <ChatBubbleLeftIcon className="h-4 w-4 inline mr-1" />
-                                {showDetail.response ? 'Update Response' : 'Write Response'}
-                            </label>
-                            <textarea
-                                value={response}
-                                onChange={(e) => setResponse(e.target.value)}
-                                rows={3}
-                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                placeholder="Type your response..."
-                            />
-                        </div>
+                        {can('contacts.respond') && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <ChatBubbleLeftIcon className="h-4 w-4 inline mr-1" />
+                                    {showDetail.response ? 'Update Response' : 'Write Response'}
+                                </label>
+                                <textarea
+                                    value={response}
+                                    onChange={(e) => setResponse(e.target.value)}
+                                    rows={3}
+                                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                    placeholder="Type your response..."
+                                />
+                            </div>
+                        )}
 
                         <div className="flex justify-end space-x-3">
                             <button onClick={() => setShowDetail(null)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">Close</button>
-                            <button onClick={handleRespond} disabled={submitting || !response.trim()} className="btn-primary !py-2 !px-5 text-sm disabled:opacity-50">
+                            {can('contacts.respond') && <button onClick={handleRespond} disabled={submitting || !response.trim()} className="btn-primary !py-2 !px-5 text-sm disabled:opacity-50">
                                 {submitting ? 'Sending...' : 'Send Response'}
-                            </button>
+                            </button>}
                         </div>
                     </div>
                 )}

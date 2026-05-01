@@ -209,9 +209,9 @@ export default function TeamPage() {
                                         {' · '}Expires {new Date(inv.expires_at).toLocaleDateString('en-KE')}
                                     </p>
                                 </div>
-                                <button onClick={() => handleRevokeInvite(inv.id)} className="text-red-400 hover:text-red-600 transition-colors">
+                                {can('team.invite') && <button onClick={() => handleRevokeInvite(inv.id)} className="text-red-400 hover:text-red-600 transition-colors">
                                     <TrashIcon className="h-4 w-4" />
-                                </button>
+                                </button>}
                             </div>
                         ))}
                     </div>
