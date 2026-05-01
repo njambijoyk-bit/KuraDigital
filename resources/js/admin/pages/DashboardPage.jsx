@@ -9,6 +9,7 @@ import {
     EnvelopeIcon,
     ClipboardDocumentListIcon,
     PhotoIcon,
+    UserIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import StatsCard from '../components/StatsCard';
@@ -24,7 +25,7 @@ export default function DashboardPage() {
         const load = async () => {
             setLoading(true);
             try {
-                const [campRes, membersRes, manifestoRes, eventsRes, newsRes, volunteersRes, contactsRes, auditRes] =
+                const [campRes, membersRes, manifestoRes, eventsRes, newsRes, volunteersRes, contactsRes, votersRes, auditRes] =
                     await Promise.allSettled([
                         api.get(`/campaigns/${campaignId}`),
                         api.get(`/campaigns/${campaignId}/members`),
@@ -33,6 +34,7 @@ export default function DashboardPage() {
                         api.get(`/campaigns/${campaignId}/news`),
                         api.get(`/campaigns/${campaignId}/volunteers`),
                         api.get(`/campaigns/${campaignId}/contacts`),
+                        api.get(`/campaigns/${campaignId}/voters/stats`),
                         api.get(`/campaigns/${campaignId}/audit-logs`),
                     ]);
 
@@ -45,6 +47,7 @@ export default function DashboardPage() {
                     news: newsRes.status === 'fulfilled' ? (newsRes.value.data.data?.length || 0) : 0,
                     volunteers: volunteersRes.status === 'fulfilled' ? (volunteersRes.value.data.meta?.total || volunteersRes.value.data.data?.length || 0) : 0,
                     contacts: contactsRes.status === 'fulfilled' ? (contactsRes.value.data.meta?.total || contactsRes.value.data.data?.length || 0) : 0,
+                    voters: votersRes.status === 'fulfilled' ? (votersRes.value.data.total || 0) : 0,
                 });
 
                 if (auditRes.status === 'fulfilled') {
@@ -95,6 +98,7 @@ export default function DashboardPage() {
                 <StatsCard title="Manifesto Pillars" value={stats.manifesto} icon={DocumentTextIcon} color="blue" />
                 <StatsCard title="Events" value={stats.events} icon={CalendarDaysIcon} color="accent" />
                 <StatsCard title="News Articles" value={stats.news} icon={NewspaperIcon} color="purple" />
+                <StatsCard title="Voters" value={stats.voters} icon={UserIcon} color="blue" />
                 <StatsCard title="Volunteers" value={stats.volunteers} icon={HandRaisedIcon} color="primary" />
                 <StatsCard title="Messages" value={stats.contacts} icon={EnvelopeIcon} color="red" />
             </div>

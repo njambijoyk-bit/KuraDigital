@@ -16,6 +16,7 @@ import {
     BuildingOffice2Icon,
     ChevronLeftIcon,
     UserGroupIcon,
+    UserIcon,
 } from '@heroicons/react/24/outline';
 import useCampaignPermissions from '../hooks/useCampaignPermissions';
 
@@ -28,6 +29,7 @@ const campaignNav = [
     { to: 'news', icon: NewspaperIcon, label: 'News', requiredPermission: 'news.view' },
     { to: 'gallery', icon: PhotoIcon, label: 'Gallery', requiredPermission: 'gallery.view' },
     { to: 'projects', icon: FolderIcon, label: 'Projects', requiredPermission: 'projects.view' },
+    { to: 'voters', icon: UserIcon, label: 'Voters', requiredPermission: 'voters.view' },
     { to: 'volunteers', icon: HandRaisedIcon, label: 'Volunteers', requiredPermission: 'volunteers.view' },
     { to: 'contacts', icon: EnvelopeIcon, label: 'Contacts', requiredPermission: 'contacts.view' },
     { to: 'opponents', icon: UserGroupIcon, label: 'Opponents', requiredPermission: 'opponents.view' },
