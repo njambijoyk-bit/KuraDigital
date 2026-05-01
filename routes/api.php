@@ -16,6 +16,9 @@ use App\Http\Controllers\Api\V1\SiteSettingsController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\VoterController;
 use App\Http\Controllers\Api\V1\VolunteerController;
+use App\Http\Controllers\Api\V1\FieldAgentController;
+use App\Http\Controllers\Api\V1\SurveyController;
+use App\Http\Controllers\Api\V1\CheckInController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -175,6 +178,30 @@ Route::prefix('v1')->group(function () {
             Route::post('/opponents/{opponent}/research', [OpponentController::class, 'researchStore']);
             Route::put('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchUpdate']);
             Route::delete('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchDestroy']);
+
+            // --- Phase 1D: Field Operations ---
+
+            // Field agents
+            Route::get('/field-agents', [FieldAgentController::class, 'index']);
+            Route::post('/field-agents', [FieldAgentController::class, 'store']);
+            Route::get('/field-agents/locations', [FieldAgentController::class, 'locations']);
+            Route::get('/field-agents/{fieldAgent}', [FieldAgentController::class, 'show']);
+            Route::put('/field-agents/{fieldAgent}', [FieldAgentController::class, 'update']);
+            Route::delete('/field-agents/{fieldAgent}', [FieldAgentController::class, 'destroy']);
+            Route::post('/field-agents/{fieldAgent}/assign-station', [FieldAgentController::class, 'assignStation']);
+
+            // Surveys
+            Route::get('/surveys', [SurveyController::class, 'index']);
+            Route::post('/surveys', [SurveyController::class, 'store']);
+            Route::get('/surveys/{survey}', [SurveyController::class, 'show']);
+            Route::put('/surveys/{survey}', [SurveyController::class, 'update']);
+            Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy']);
+            Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit']);
+            Route::get('/surveys/{survey}/responses', [SurveyController::class, 'responses']);
+
+            // Check-ins
+            Route::get('/check-ins', [CheckInController::class, 'index']);
+            Route::post('/check-ins', [CheckInController::class, 'store']);
         });
     });
 });

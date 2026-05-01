@@ -100,6 +100,21 @@ class Campaign extends Model
         return $this->hasMany(Voter::class);
     }
 
+    public function fieldAgents(): HasMany
+    {
+        return $this->hasMany(FieldAgent::class);
+    }
+
+    public function surveys(): HasMany
+    {
+        return $this->hasMany(Survey::class);
+    }
+
+    public function checkIns(): HasMany
+    {
+        return $this->hasMany(CheckIn::class);
+    }
+
     public function ancestors(): array
     {
         $ancestors = [];
