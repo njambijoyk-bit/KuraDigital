@@ -15,6 +15,9 @@ use App\Models\Project;
 use App\Models\Site;
 use App\Models\Voter;
 use App\Models\Volunteer;
+use App\Models\FieldAgent;
+use App\Models\Survey;
+use App\Models\CheckIn;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CampaignMemberPolicy;
 use App\Policies\CampaignPolicy;
@@ -28,6 +31,9 @@ use App\Policies\ProjectPolicy;
 use App\Policies\SitePolicy;
 use App\Policies\VoterPolicy;
 use App\Policies\VolunteerPolicy;
+use App\Policies\FieldAgentPolicy;
+use App\Policies\SurveyPolicy;
+use App\Policies\CheckInPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -46,6 +52,9 @@ class AuthServiceProvider extends ServiceProvider
         Volunteer::class => VolunteerPolicy::class,
         Voter::class => VoterPolicy::class,
         ContactMessage::class => ContactMessagePolicy::class,
+        FieldAgent::class => FieldAgentPolicy::class,
+        Survey::class => SurveyPolicy::class,
+        CheckIn::class => CheckInPolicy::class,
     ];
 
     public function boot(): void

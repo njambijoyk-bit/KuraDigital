@@ -21,6 +21,8 @@ const ContactsPage = lazy(() => import('./pages/ContactsPage'));
 const MediaPage = lazy(() => import('./pages/MediaPage'));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
 const OpponentsPage = lazy(() => import('./pages/OpponentsPage'));
+const FieldOpsPage = lazy(() => import('./pages/FieldOpsPage'));
+const SurveysPage = lazy(() => import('./pages/SurveysPage'));
 
 function Loading() {
     return (
@@ -68,6 +70,8 @@ export default function AdminApp() {
                     <Route path="volunteers" element={<RequirePermission permission="volunteers.view"><VolunteersPage /></RequirePermission>} />
                     <Route path="contacts" element={<RequirePermission permission="contacts.view"><ContactsPage /></RequirePermission>} />
                     <Route path="opponents" element={<RequirePermission permission="opponents.view"><OpponentsPage /></RequirePermission>} />
+                    <Route path="field-ops" element={<RequirePermission permission="field.view"><FieldOpsPage /></RequirePermission>} />
+                    <Route path="surveys" element={<RequirePermission permission="field.view"><SurveysPage /></RequirePermission>} />
                     <Route path="media" element={<RequirePermission permission="media.view"><MediaPage /></RequirePermission>} />
                     <Route path="audit" element={<RequirePermission permission="audit.view"><AuditLogPage /></RequirePermission>} />
                 </Route>
