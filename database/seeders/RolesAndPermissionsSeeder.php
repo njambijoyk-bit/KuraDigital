@@ -10,7 +10,10 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
+        // Reset cached roles and permissions to prevent stale cache from
+        // causing the seeder to silently skip role/permission creation.
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app('cache')->forget('spatie.permission.cache');
 
         $permissions = $this->getPermissions();
 
@@ -24,6 +27,9 @@ class RolesAndPermissionsSeeder extends Seeder
             $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
             $role->syncPermissions($rolePermissions);
         }
+
+        // Flush cache again so the application picks up the newly seeded data.
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
     }
 
     private function getPermissions(): array

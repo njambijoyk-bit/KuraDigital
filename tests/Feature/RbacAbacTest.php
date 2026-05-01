@@ -455,9 +455,7 @@ class RbacAbacTest extends TestCase
 
     public function test_geographic_filter_limits_opponents_to_assigned_ward(): void
     {
-        if (config('database.default') === 'sqlite') {
-            $this->markTestSkipped('OpponentController uses MySQL FIELD() function not supported by SQLite.');
-        }
+        // FIELD() replaced with CASE WHEN — now works on both MySQL and SQLite.
 
         Opponent::create([
             'campaign_id' => $this->campaign->id,
