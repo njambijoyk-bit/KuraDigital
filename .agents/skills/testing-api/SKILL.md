@@ -17,7 +17,8 @@ KuraDigital is a Laravel 10 campaign manager platform with a React frontend. The
 cd /home/ubuntu/repos/KuraDigital
 composer install --no-interaction
 
-# For local testing, switch mail to log driver to avoid SMTP errors:
+# .env.example already defaults to MAIL_MAILER=log (fixed in PR #27).
+# If your .env still has MAIL_MAILER=smtp, update it:
 sed -i 's/MAIL_MAILER=smtp/MAIL_MAILER=log/' .env
 
 php artisan migrate:fresh --seed
@@ -28,13 +29,13 @@ php artisan serve --host=127.0.0.1 --port=8000 &
 The `migrate:fresh --seed` command runs `RolesAndPermissionsSeeder` which creates 26 roles and 126 permissions via Spatie Laravel-Permission.
 
 ### Seeding Reliability
-**Important:** After `migrate:fresh --seed`, verify roles were actually created:
+The seeder now includes explicit Spatie permission cache flushes before and after seeding (fixed in PR #27). Verify roles were created:
 ```bash
 sqlite3 database/database.sqlite "SELECT COUNT(*) FROM roles;"
-# Should return 26. If 0, run:
+# Should return 26. If 0 (unlikely after the cache flush fix), run:
 php artisan db:seed --class=RolesAndPermissionsSeeder
 ```
-The Spatie permission cache can sometimes cause the seeder to report success while roles are not persisted. Always verify after seeding.
+If you encounter 0 roles after seeding, the Spatie permission cache might still be causing issues — try `php artisan cache:clear` before re-seeding.
 
 ### PHPUnit and Live API Testing Interaction
 **Critical:** Running `php artisan test` (PHPUnit) uses the `RefreshDatabase` trait which wipes the SQLite database. If you are running live API tests (curl) in parallel with PHPUnit tests, the PHPUnit run will destroy all your test users, tokens, campaigns, and data. Always run PHPUnit tests BEFORE setting up live API test data, or re-seed after PHPUnit completes.
@@ -99,7 +100,7 @@ To test tenant isolation, register two separate users. User A creates a campaign
 3. User B: `POST /invitations/accept` with `{token}` (the raw token from step 2)
 4. User B can now access campaign-scoped routes
 
-**Note:** The mail driver must be set to `log` (not `smtp`) for local testing. Otherwise invite requests fail with SMTP connection errors (`mailpit:1025` not available). The raw token is returned in the API response; the DB stores an HMAC hash.
+**Note:** The mail driver must be set to `log` (not `smtp`) for local testing. Otherwise invite requests fail with SMTP connection errors (`mailpit:1025` not available). The `.env.example` now defaults to `MAIL_MAILER=log`. The raw token is returned in the API response; the DB stores an HMAC hash.
 
 ### RBAC Testing Patterns
 All 13 controllers enforce RBAC via `$this->authorize()` calls. To test:
@@ -168,6 +169,9 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/campaigns/{id}/media \
 
 **Members list format:** `GET /campaigns/{id}/members` returns paginated response with `data` array (not `members`).
 
+### Opponent Threat-Level Sorting
+The opponents list endpoint (`GET /campaigns/{id}/opponents`) sorts by threat level using a `CASE WHEN` statement that works on both MySQL and SQLite. Expected sort order: `critical` (1) → `high` (2) → `medium` (3) → `low` (4) → other (5). Verify by creating opponents with different threat levels and checking the response order.
+
 ## Response Format Notes
 
 - **Audit logs** use Laravel pagination: top-level keys are `current_page`, `data`, `total`, etc. The actual log entries are in the `data` array, not `audit_logs`.
@@ -176,12 +180,16 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/campaigns/{id}/media \
 
 ## Known Issues
 
-- **FIELD() MySQL function crashes on SQLite**: `OpponentController.php` uses `FIELD(threat_level, 'critical', 'high', 'medium', 'low')` for sorting which is MySQL-specific. On SQLite, the opponents list endpoint returns HTTP 500 when any opponent exists. The PHPUnit test suite explicitly skips the opponent geographic filter test because of this. Fix: replace with `CASE WHEN threat_level = 'critical' THEN 1 WHEN threat_level = 'high' THEN 2 WHEN threat_level = 'medium' THEN 3 WHEN threat_level = 'low' THEN 4 ELSE 5 END`.
 - **Audit log `campaign_id` for Campaign model**: Fixed — Campaign model has `getAuditCampaignId()` returning `$this->id`. All models with `Auditable` trait should have this method if they don't have a direct `campaign_id` column.
 - **Vite manifest error on non-API routes**: The frontend build might not exist locally. This only affects non-API routes. API routes work fine with `Accept: application/json`.
 - **MFA in dev**: MFA verification accepts any 6-digit code in non-production environments.
 - **Frontend field name alignment**: Frontend forms may use different field names than the API expects. When testing content forms (events, site settings, manifesto), verify field names match the controller's validation rules.
 - **CampaignPolicy::create might be too restrictive**: If new users can't create campaigns, check whether `CampaignPolicy::create` requires existing leadership memberships. This might need a fix to allow first-time campaign creation.
+
+### Resolved Issues (for reference)
+- **FIELD() MySQL function on SQLite** — Fixed in PR #27. `OpponentController.php` now uses `CASE WHEN` instead of MySQL-specific `FIELD()`. The PHPUnit geographic filter test for opponents no longer needs to be skipped.
+- **MAIL_MAILER=smtp default** — Fixed in PR #27. `.env.example` now defaults to `MAIL_MAILER=log` so local dev invite endpoints work without mailpit.
+- **Seeder cache inconsistency** — Fixed in PR #27. `RolesAndPermissionsSeeder` now flushes Spatie permission cache before and after seeding, preventing intermittent empty roles table.
 
 ## Password Requirements
 - Minimum 8 characters
