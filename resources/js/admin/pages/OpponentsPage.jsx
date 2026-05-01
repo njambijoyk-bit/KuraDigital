@@ -120,7 +120,10 @@ export default function OpponentsPage() {
         setSubmitting(true); setError(null);
         try {
             if (editing) {
-                await api.put(`/campaigns/${campaignId}/opponents/${editing.id}`, form);
+                const { data } = await api.put(`/campaigns/${campaignId}/opponents/${editing.id}`, form);
+                if (selectedOpponent && selectedOpponent.id === editing.id) {
+                    setSelectedOpponent(data.data || data.opponent || { ...selectedOpponent, ...form });
+                }
             } else {
                 await api.post(`/campaigns/${campaignId}/opponents`, form);
             }

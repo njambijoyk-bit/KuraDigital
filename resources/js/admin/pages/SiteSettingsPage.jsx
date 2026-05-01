@@ -81,6 +81,7 @@ export default function SiteSettingsPage() {
         setSaving(false);
     };
 
+    const editable = can('site.edit');
     const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
     if (loading) {
@@ -100,6 +101,13 @@ export default function SiteSettingsPage() {
                     </div>
                 )}
 
+                {!editable && (
+                    <div className="p-3 rounded-lg text-sm bg-yellow-50 text-yellow-700 border border-yellow-200">
+                        You have view-only access to site settings. Contact your campaign administrator for edit permissions.
+                    </div>
+                )}
+
+                <fieldset disabled={!editable} className={`space-y-6 ${!editable ? 'opacity-75' : ''}`}>
                 {/* Basic Info */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                     <h3 className="font-heading font-semibold text-gray-900 mb-4 flex items-center space-x-2">
@@ -197,6 +205,8 @@ export default function SiteSettingsPage() {
                         </div>
                     </div>
                 </div>
+
+                </fieldset>
 
                 <div className="flex justify-end">
                     <PermissionGate permission="site.edit">
