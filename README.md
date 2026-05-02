@@ -36,6 +36,7 @@ White-label campaign website platform for political candidates. Each candidate g
 | Projects | `/:slug/projects` | Track record & development projects |
 | Volunteer | `/:slug/volunteer` | Signup form for volunteers & agents |
 | Contact | `/:slug/contact` | Contact form + info |
+| Register | `/:slug/register` | Voter/supporter registration form |
 
 ## Setup
 
@@ -102,6 +103,7 @@ Visit `http://localhost:8000/demo-candidate` to see the demo site.
 | GET | `/api/sites/{id}/projects` | Get projects |
 | POST | `/api/sites/{id}/contact` | Submit contact message |
 | POST | `/api/sites/{id}/volunteers` | Register volunteer |
+| POST | `/api/sites/{id}/register-supporter` | Register voter/supporter |
 
 ## Documentation
 

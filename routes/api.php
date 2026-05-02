@@ -34,6 +34,7 @@ Route::get('/sites/{siteId}/gallery', [SiteController::class, 'gallery']);
 Route::get('/sites/{siteId}/projects', [SiteController::class, 'projects']);
 Route::post('/sites/{siteId}/contact', [SiteController::class, 'storeContact']);
 Route::post('/sites/{siteId}/volunteers', [SiteController::class, 'storeVolunteer']);
+Route::post('/sites/{siteId}/register-supporter', [SiteController::class, 'registerSupporter']);
 
 /*
 |--------------------------------------------------------------------------

@@ -17,6 +17,7 @@ export default function Navbar() {
         { to: `${base}/news`, label: 'News' },
         { to: `${base}/gallery`, label: 'Gallery' },
         { to: `${base}/contact`, label: 'Contact' },
+        { to: `${base}/register`, label: 'Register' },
     ];
 
     const primaryColor = site?.primary_color || '#16a34a';
