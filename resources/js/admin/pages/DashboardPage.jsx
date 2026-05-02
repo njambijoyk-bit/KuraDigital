@@ -10,6 +10,9 @@ import {
     ClipboardDocumentListIcon,
     PhotoIcon,
     UserIcon,
+    MapIcon,
+    DocumentChartBarIcon,
+    MapPinIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import StatsCard from '../components/StatsCard';
@@ -25,7 +28,7 @@ export default function DashboardPage() {
         const load = async () => {
             setLoading(true);
             try {
-                const [campRes, membersRes, manifestoRes, eventsRes, newsRes, volunteersRes, contactsRes, votersRes, auditRes] =
+                const [campRes, membersRes, manifestoRes, eventsRes, newsRes, volunteersRes, contactsRes, votersRes, auditRes, agentsRes, surveysRes, checkInsRes] =
                     await Promise.allSettled([
                         api.get(`/campaigns/${campaignId}`),
                         api.get(`/campaigns/${campaignId}/members`),
@@ -36,6 +39,9 @@ export default function DashboardPage() {
                         api.get(`/campaigns/${campaignId}/contacts`),
                         api.get(`/campaigns/${campaignId}/voters/stats`),
                         api.get(`/campaigns/${campaignId}/audit-logs`),
+                        api.get(`/campaigns/${campaignId}/field-agents`),
+                        api.get(`/campaigns/${campaignId}/surveys`),
+                        api.get(`/campaigns/${campaignId}/check-ins`),
                     ]);
 
                 if (campRes.status === 'fulfilled') setCampaign(campRes.value.data.campaign);
@@ -48,6 +54,9 @@ export default function DashboardPage() {
                     volunteers: volunteersRes.status === 'fulfilled' ? (volunteersRes.value.data.meta?.total || volunteersRes.value.data.data?.length || 0) : 0,
                     contacts: contactsRes.status === 'fulfilled' ? (contactsRes.value.data.meta?.total || contactsRes.value.data.data?.length || 0) : 0,
                     voters: votersRes.status === 'fulfilled' ? (votersRes.value.data.total || 0) : 0,
+                    fieldAgents: agentsRes.status === 'fulfilled' ? (agentsRes.value.data.meta?.total || agentsRes.value.data.total || agentsRes.value.data.data?.length || 0) : 0,
+                    surveys: surveysRes.status === 'fulfilled' ? (surveysRes.value.data.meta?.total || surveysRes.value.data.total || surveysRes.value.data.data?.length || 0) : 0,
+                    checkIns: checkInsRes.status === 'fulfilled' ? (checkInsRes.value.data.meta?.total || checkInsRes.value.data.total || checkInsRes.value.data.data?.length || 0) : 0,
                 });
 
                 if (auditRes.status === 'fulfilled') {
@@ -103,13 +112,27 @@ export default function DashboardPage() {
                 <StatsCard title="Messages" value={stats.contacts} icon={EnvelopeIcon} color="red" />
             </div>
 
+            {/* Field Operations stats */}
+            <div>
+                <h3 className="font-heading font-semibold text-gray-900 mb-3">Field Operations</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <StatsCard title="Field Agents" value={stats.fieldAgents} icon={MapIcon} color="accent" />
+                    <StatsCard title="Surveys" value={stats.surveys} icon={DocumentChartBarIcon} color="purple" />
+                    <StatsCard title="Check-ins" value={stats.checkIns} icon={MapPinIcon} color="blue" />
+                </div>
+            </div>
+
             {/* Quick actions */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                     { to: 'manifesto', icon: DocumentTextIcon, label: 'Manage Manifesto', color: 'text-blue-600 bg-blue-50' },
                     { to: 'events', icon: CalendarDaysIcon, label: 'Manage Events', color: 'text-accent-600 bg-accent-50' },
+                    { to: 'voters', icon: UserIcon, label: 'Manage Voters', color: 'text-green-600 bg-green-50' },
+                    { to: 'field-ops', icon: MapIcon, label: 'Field Operations', color: 'text-orange-600 bg-orange-50' },
+                    { to: 'surveys', icon: DocumentChartBarIcon, label: 'Surveys', color: 'text-purple-600 bg-purple-50' },
                     { to: 'news', icon: NewspaperIcon, label: 'Write News', color: 'text-purple-600 bg-purple-50' },
                     { to: 'team', icon: UsersIcon, label: 'Manage Team', color: 'text-primary-600 bg-primary-50' },
+                    { to: 'volunteers', icon: HandRaisedIcon, label: 'Volunteers', color: 'text-teal-600 bg-teal-50' },
                 ].map((action) => (
                     <Link
                         key={action.to}

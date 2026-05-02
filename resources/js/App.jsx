@@ -10,6 +10,7 @@ import GalleryPage from './pages/GalleryPage';
 import ContactPage from './pages/ContactPage';
 import VolunteerPage from './pages/VolunteerPage';
 import ProjectsPage from './pages/ProjectsPage';
+import RegisterPage from './pages/RegisterPage';
 import NotFoundPage from './pages/NotFoundPage';
 import useSiteStore from './stores/useSiteStore';
 import AdminApp from './admin/AdminApp';
@@ -56,6 +57,7 @@ function SiteWrapper() {
                 <Route path="contact" element={<ContactPage />} />
                 <Route path="volunteer" element={<VolunteerPage />} />
                 <Route path="projects" element={<ProjectsPage />} />
+                <Route path="register" element={<RegisterPage />} />
                 <Route path="*" element={<NotFoundPage />} />
             </Routes>
         </Layout>

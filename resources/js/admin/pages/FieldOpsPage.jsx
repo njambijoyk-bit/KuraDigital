@@ -8,6 +8,8 @@ import {
     MapPinIcon,
     UserIcon,
     ClockIcon,
+    DocumentChartBarIcon,
+    CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import PermissionGate from '../components/PermissionGate';
@@ -46,6 +48,7 @@ export default function FieldOpsPage() {
     const [checkIns, setCheckIns] = useState([]);
     const [showCheckIns, setShowCheckIns] = useState(false);
     const [page, setPage] = useState(1);
+    const [stats, setStats] = useState(null);
     const { can } = useCampaignPermissions();
 
     const fetchAgents = useCallback(async (pg = page) => {
@@ -68,7 +71,26 @@ export default function FieldOpsPage() {
         } catch { /* handled */ }
     }, [campaignId]);
 
-    useEffect(() => { fetchAgents(); }, [fetchAgents]);
+    const fetchStats = useCallback(async () => {
+        try {
+            const [agentsRes, checkInsRes, surveysRes] = await Promise.allSettled([
+                api.get(`/campaigns/${campaignId}/field-agents`, { params: { page: 1 } }),
+                api.get(`/campaigns/${campaignId}/check-ins`, { params: { page: 1 } }),
+                api.get(`/campaigns/${campaignId}/surveys`, { params: { page: 1 } }),
+            ]);
+            const agentData = agentsRes.status === 'fulfilled' ? agentsRes.value.data : {};
+            const allAgents = agentData.data || [];
+            const activeAgents = allAgents.filter((a) => a.status === 'active').length;
+            setStats({
+                totalAgents: agentData.meta?.total || agentData.total || allAgents.length,
+                activeAgents,
+                totalCheckIns: checkInsRes.status === 'fulfilled' ? (checkInsRes.value.data.meta?.total || checkInsRes.value.data.total || checkInsRes.value.data.data?.length || 0) : 0,
+                totalSurveys: surveysRes.status === 'fulfilled' ? (surveysRes.value.data.meta?.total || surveysRes.value.data.total || surveysRes.value.data.data?.length || 0) : 0,
+            });
+        } catch { /* handled */ }
+    }, [campaignId]);
+
+    useEffect(() => { fetchAgents(); fetchStats(); }, [fetchAgents, fetchStats]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -228,6 +250,16 @@ export default function FieldOpsPage() {
                     </PermissionGate>
                 </div>
             </div>
+
+            {/* Stats cards */}
+            {stats && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatsCard title="Total Agents" value={stats.totalAgents} icon={UserIcon} color="primary" />
+                    <StatsCard title="Active Agents" value={stats.activeAgents} icon={CheckCircleIcon} color="green" />
+                    <StatsCard title="Check-ins" value={stats.totalCheckIns} icon={MapPinIcon} color="blue" />
+                    <StatsCard title="Surveys" value={stats.totalSurveys} icon={DocumentChartBarIcon} color="purple" />
+                </div>
+            )}
 
             <div className="flex items-center space-x-4">
                 <div className="relative flex-1 max-w-md">

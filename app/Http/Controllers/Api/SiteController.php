@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Site;
+use App\Models\Voter;
 use Illuminate\Http\Request;
 
 class SiteController extends Controller
@@ -94,5 +95,35 @@ class SiteController extends Controller
         $site->volunteers()->create($validated);
 
         return response()->json(['message' => 'Thank you for volunteering!'], 201);
+    }
+
+    public function registerSupporter(Request $request, string $siteId)
+    {
+        $site = Site::findOrFail($siteId);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:50',
+            'email' => 'nullable|email|max:255',
+            'national_id' => 'nullable|string|max:50',
+            'county' => 'nullable|string|max:255',
+            'constituency' => 'nullable|string|max:255',
+            'ward' => 'nullable|string|max:255',
+            'polling_station' => 'nullable|string|max:255',
+            'gender' => 'nullable|string|max:50',
+        ]);
+
+        $campaign = $site->campaign;
+        if (!$campaign) {
+            return response()->json(['message' => 'Campaign not configured for this site.'], 422);
+        }
+
+        $validated['campaign_id'] = $campaign->id;
+        $validated['supporter_status'] = 'supporter';
+        $validated['source'] = 'online';
+
+        Voter::create($validated);
+
+        return response()->json(['message' => 'Thank you for registering your support!'], 201);
     }
 }
