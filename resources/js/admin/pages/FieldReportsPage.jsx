@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
     CameraIcon,
     VideoCameraIcon,
@@ -147,6 +147,15 @@ export default function FieldReportsPage() {
                     <h1 className="text-2xl font-heading font-bold text-gray-900">Field Reports</h1>
                     <p className="text-sm text-gray-500 mt-1">Photos, videos, audio recordings, and text reports from field agents</p>
                 </div>
+                <PermissionGate permission="field.create-reports">
+                    <Link
+                        to={`/admin/campaigns/${campaignId}/capture-report`}
+                        className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
+                    >
+                        <CameraIcon className="h-4 w-4 mr-2" />
+                        Capture Report
+                    </Link>
+                </PermissionGate>
             </div>
 
             {/* Stats */}
