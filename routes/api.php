@@ -212,6 +212,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/field-reports/sync', [FieldReportController::class, 'sync']);
             Route::get('/field-reports/{fieldReport}', [FieldReportController::class, 'show']);
             Route::put('/field-reports/{fieldReport}', [FieldReportController::class, 'update']);
+            Route::post('/field-reports/{fieldReport}/reprocess', [FieldReportController::class, 'reprocess']);
             Route::delete('/field-reports/{fieldReport}', [FieldReportController::class, 'destroy']);
         });
     });

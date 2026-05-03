@@ -113,6 +113,15 @@ export default function FieldReportsPage() {
         } catch { /* handled */ }
     };
 
+    const handleReprocess = async (id) => {
+        try {
+            await api.post(`/campaigns/${campaignId}/field-reports/${id}/reprocess`);
+            openDetail({ id });
+            fetchReports();
+            fetchStats();
+        } catch { /* handled */ }
+    };
+
     const TypeIcon = ({ type }) => {
         const Icon = typeIcons[type] || DocumentTextIcon;
         return (
@@ -476,6 +485,15 @@ export default function FieldReportsPage() {
                                         className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
                                     >
                                         Unflag
+                                    </button>
+                                )}
+                                {selectedReport.media && selectedReport.media.length > 0 && (
+                                    <button
+                                        onClick={() => handleReprocess(selectedReport.id)}
+                                        className="px-3 py-1.5 text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 flex items-center gap-1"
+                                    >
+                                        <ArrowPathIcon className="h-4 w-4" />
+                                        Reprocess
                                     </button>
                                 )}
                             </div>
