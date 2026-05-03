@@ -144,6 +144,27 @@ class Campaign extends Model
     {
         return $this->hasMany(MessageCampaign::class);
     }
+
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(Budget::class);
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    public function donations(): HasMany
+    {
+        return $this->hasMany(Donation::class);
+    }
+
+    public function mpesaTransactions(): HasMany
+    {
+        return $this->hasMany(MpesaTransaction::class);
+    }
+
     public function ancestors(): array
     {
         $ancestors = [];
