@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\VolunteerController;
 use App\Http\Controllers\Api\V1\FieldAgentController;
 use App\Http\Controllers\Api\V1\SurveyController;
 use App\Http\Controllers\Api\V1\CheckInController;
+use App\Http\Controllers\Api\V1\FieldReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -203,6 +204,15 @@ Route::prefix('v1')->group(function () {
             // Check-ins
             Route::get('/check-ins', [CheckInController::class, 'index']);
             Route::post('/check-ins', [CheckInController::class, 'store']);
+
+            // Field reports
+            Route::get('/field-reports', [FieldReportController::class, 'index']);
+            Route::post('/field-reports', [FieldReportController::class, 'store']);
+            Route::get('/field-reports/stats', [FieldReportController::class, 'stats']);
+            Route::post('/field-reports/sync', [FieldReportController::class, 'sync']);
+            Route::get('/field-reports/{fieldReport}', [FieldReportController::class, 'show']);
+            Route::put('/field-reports/{fieldReport}', [FieldReportController::class, 'update']);
+            Route::delete('/field-reports/{fieldReport}', [FieldReportController::class, 'destroy']);
         });
     });
 });

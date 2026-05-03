@@ -19,6 +19,7 @@ import {
     UserIcon,
     MapIcon,
     DocumentChartBarIcon,
+    CameraIcon,
 } from '@heroicons/react/24/outline';
 import useCampaignPermissions from '../hooks/useCampaignPermissions';
 
@@ -36,6 +37,7 @@ const campaignNav = [
     { to: 'contacts', icon: EnvelopeIcon, label: 'Contacts', requiredPermission: 'contacts.view' },
     { to: 'opponents', icon: UserGroupIcon, label: 'Opponents', requiredPermission: 'opponents.view' },
     { to: 'field-ops', icon: MapIcon, label: 'Field Ops', requiredPermission: 'field.view' },
+    { to: 'field-reports', icon: CameraIcon, label: 'Field Reports', requiredPermission: 'field.view-reports' },
     { to: 'surveys', icon: DocumentChartBarIcon, label: 'Surveys', requiredPermission: 'field.view' },
     { to: 'media', icon: FilmIcon, label: 'Media Library', requiredPermission: 'media.view' },
     { to: 'audit', icon: ClipboardDocumentListIcon, label: 'Audit Log', requiredPermission: 'audit.view' },

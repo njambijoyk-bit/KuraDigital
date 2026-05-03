@@ -297,12 +297,14 @@ class RolesAndPermissionsSeeder extends Seeder
                 'eday.submit-results', 'eday.report-incidents', 'eday.view',
                 'voters.view',
                 'media.upload',
+                'field.create-reports', 'field.view-reports',
             ],
 
             'campaign-agent' => [
                 'field.submit-survey', 'field.submit-checkin',
                 'voters.view',
                 'media.upload',
+                'field.create-reports', 'field.view-reports',
             ],
 
             'volunteer' => [

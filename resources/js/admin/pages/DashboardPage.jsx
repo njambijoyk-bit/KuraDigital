@@ -13,6 +13,7 @@ import {
     MapIcon,
     DocumentChartBarIcon,
     MapPinIcon,
+    CameraIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import StatsCard from '../components/StatsCard';
@@ -28,7 +29,7 @@ export default function DashboardPage() {
         const load = async () => {
             setLoading(true);
             try {
-                const [campRes, membersRes, manifestoRes, eventsRes, newsRes, volunteersRes, contactsRes, votersRes, auditRes, agentsRes, surveysRes, checkInsRes] =
+                const [campRes, membersRes, manifestoRes, eventsRes, newsRes, volunteersRes, contactsRes, votersRes, auditRes, agentsRes, surveysRes, checkInsRes, fieldReportsRes] =
                     await Promise.allSettled([
                         api.get(`/campaigns/${campaignId}`),
                         api.get(`/campaigns/${campaignId}/members`),
@@ -42,6 +43,7 @@ export default function DashboardPage() {
                         api.get(`/campaigns/${campaignId}/field-agents`),
                         api.get(`/campaigns/${campaignId}/surveys`),
                         api.get(`/campaigns/${campaignId}/check-ins`),
+                        api.get(`/campaigns/${campaignId}/field-reports/stats`).catch(() => null),
                     ]);
 
                 if (campRes.status === 'fulfilled') setCampaign(campRes.value.data.campaign);
@@ -57,6 +59,7 @@ export default function DashboardPage() {
                     fieldAgents: agentsRes.status === 'fulfilled' ? (agentsRes.value.data.meta?.total || agentsRes.value.data.total || agentsRes.value.data.data?.length || 0) : 0,
                     surveys: surveysRes.status === 'fulfilled' ? (surveysRes.value.data.meta?.total || surveysRes.value.data.total || surveysRes.value.data.data?.length || 0) : 0,
                     checkIns: checkInsRes.status === 'fulfilled' ? (checkInsRes.value.data.meta?.total || checkInsRes.value.data.total || checkInsRes.value.data.data?.length || 0) : 0,
+                    fieldReports: fieldReportsRes.status === 'fulfilled' && fieldReportsRes.value?.data?.stats ? fieldReportsRes.value.data.stats.total : 0,
                 });
 
                 if (auditRes.status === 'fulfilled') {
@@ -119,6 +122,7 @@ export default function DashboardPage() {
                     <StatsCard title="Field Agents" value={stats.fieldAgents} icon={MapIcon} color="accent" />
                     <StatsCard title="Surveys" value={stats.surveys} icon={DocumentChartBarIcon} color="purple" />
                     <StatsCard title="Check-ins" value={stats.checkIns} icon={MapPinIcon} color="blue" />
+                    <StatsCard title="Field Reports" value={stats.fieldReports} icon={CameraIcon} color="orange" />
                 </div>
             </div>
 
@@ -129,6 +133,7 @@ export default function DashboardPage() {
                     { to: 'events', icon: CalendarDaysIcon, label: 'Manage Events', color: 'text-accent-600 bg-accent-50' },
                     { to: 'voters', icon: UserIcon, label: 'Manage Voters', color: 'text-green-600 bg-green-50' },
                     { to: 'field-ops', icon: MapIcon, label: 'Field Operations', color: 'text-orange-600 bg-orange-50' },
+                    { to: 'field-reports', icon: CameraIcon, label: 'Field Reports', color: 'text-teal-600 bg-teal-50' },
                     { to: 'surveys', icon: DocumentChartBarIcon, label: 'Surveys', color: 'text-purple-600 bg-purple-50' },
                     { to: 'news', icon: NewspaperIcon, label: 'Write News', color: 'text-purple-600 bg-purple-50' },
                     { to: 'team', icon: UsersIcon, label: 'Manage Team', color: 'text-primary-600 bg-primary-50' },

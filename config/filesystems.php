@@ -56,6 +56,18 @@ return [
             'throw' => false,
         ],
 
+        'cdn' => [
+            'driver' => 's3',
+            'key' => env('CDN_ACCESS_KEY_ID'),
+            'secret' => env('CDN_SECRET_ACCESS_KEY'),
+            'region' => env('CDN_REGION', 'auto'),
+            'bucket' => env('CDN_BUCKET', 'kuradigital-field-reports'),
+            'url' => env('CDN_URL'),
+            'endpoint' => env('CDN_ENDPOINT'),
+            'use_path_style_endpoint' => false,
+            'throw' => false,
+        ],
+
     ],
 
     /*
