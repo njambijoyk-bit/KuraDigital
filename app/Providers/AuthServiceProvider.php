@@ -24,6 +24,9 @@ use App\Models\WardTarget;
 use App\Models\Poll;
 use App\Models\MessageTemplate;
 use App\Models\MessageCampaign;
+use App\Models\Budget;
+use App\Models\Expense;
+use App\Models\Donation;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CampaignMemberPolicy;
 use App\Policies\CampaignPolicy;
@@ -46,6 +49,9 @@ use App\Policies\WardTargetPolicy;
 use App\Policies\PollPolicy;
 use App\Policies\MessageTemplatePolicy;
 use App\Policies\MessageCampaignPolicy;
+use App\Policies\BudgetPolicy;
+use App\Policies\ExpensePolicy;
+use App\Policies\DonationPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -73,6 +79,9 @@ class AuthServiceProvider extends ServiceProvider
         Poll::class => PollPolicy::class,
         MessageTemplate::class => MessageTemplatePolicy::class,
         MessageCampaign::class => MessageCampaignPolicy::class,
+        Budget::class => BudgetPolicy::class,
+        Expense::class => ExpensePolicy::class,
+        Donation::class => DonationPolicy::class,
     ];
 
     public function boot(): void

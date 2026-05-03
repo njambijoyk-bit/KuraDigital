@@ -22,6 +22,8 @@ use App\Http\Controllers\Api\V1\CheckInController;
 use App\Http\Controllers\Api\V1\FieldReportController;
 use App\Http\Controllers\Api\V1\StrategyController;
 use App\Http\Controllers\Api\V1\MessagingController;
+use App\Http\Controllers\Api\V1\FinanceController;
+use App\Http\Controllers\Api\V1\MpesaWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -256,6 +258,49 @@ Route::prefix('v1')->group(function () {
             Route::delete('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsDestroy']);
             Route::post('/messaging/campaigns/{messageCampaign}/approve', [MessagingController::class, 'campaignsApprove']);
             Route::post('/messaging/campaigns/{messageCampaign}/send', [MessagingController::class, 'campaignsSend']);
+
+            // --- Phase 1G: Finance ---
+
+            // Budgets
+            Route::get('/finance/budgets', [FinanceController::class, 'budgetsIndex']);
+            Route::post('/finance/budgets', [FinanceController::class, 'budgetsStore']);
+            Route::get('/finance/budgets/{budget}', [FinanceController::class, 'budgetsShow']);
+            Route::put('/finance/budgets/{budget}', [FinanceController::class, 'budgetsUpdate']);
+            Route::delete('/finance/budgets/{budget}', [FinanceController::class, 'budgetsDestroy']);
+
+            // Expenses
+            Route::get('/finance/expenses', [FinanceController::class, 'expensesIndex']);
+            Route::post('/finance/expenses', [FinanceController::class, 'expensesStore']);
+            Route::get('/finance/expenses/export', [FinanceController::class, 'expensesExport']);
+            Route::get('/finance/expenses/{expense}', [FinanceController::class, 'expensesShow']);
+            Route::put('/finance/expenses/{expense}', [FinanceController::class, 'expensesUpdate']);
+            Route::delete('/finance/expenses/{expense}', [FinanceController::class, 'expensesDestroy']);
+            Route::post('/finance/expenses/{expense}/approve', [FinanceController::class, 'expensesApprove']);
+            Route::post('/finance/expenses/{expense}/reject', [FinanceController::class, 'expensesReject']);
+
+            // Donations
+            Route::get('/finance/donations', [FinanceController::class, 'donationsIndex']);
+            Route::post('/finance/donations', [FinanceController::class, 'donationsStore']);
+            Route::get('/finance/donations/export', [FinanceController::class, 'donationsExport']);
+            Route::get('/finance/donations/{donation}', [FinanceController::class, 'donationsShow']);
+
+            // Finance summary
+            Route::get('/finance/summary', [FinanceController::class, 'financeSummary']);
+
+            // M-Pesa STK Push
+            Route::post('/finance/mpesa/stk-push', [FinanceController::class, 'mpesaStkPush']);
+            Route::post('/finance/mpesa/stk-query', [FinanceController::class, 'mpesaStkQuery']);
         });
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| M-Pesa Daraja Webhook Routes (public, no auth)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/webhooks/mpesa')->group(function () {
+    Route::post('/stk-callback', [MpesaWebhookController::class, 'stkCallback']);
+    Route::post('/c2b-validation', [MpesaWebhookController::class, 'c2bValidation']);
+    Route::post('/c2b-confirmation', [MpesaWebhookController::class, 'c2bConfirmation']);
 });
