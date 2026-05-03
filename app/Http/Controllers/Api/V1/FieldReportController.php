@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessFieldMedia;
 use App\Models\Campaign;
 use App\Models\FieldAgent;
 use App\Models\FieldReport;
@@ -338,7 +339,7 @@ class FieldReportController extends Controller
 
             Storage::disk($disk)->put($path, file_get_contents($file));
 
-            FieldReportMedia::create([
+            $media = FieldReportMedia::create([
                 'field_report_id' => $report->id,
                 'filename' => $filename,
                 'original_filename' => $file->getClientOriginalName(),
@@ -349,6 +350,36 @@ class FieldReportController extends Controller
                 'url' => Storage::disk($disk)->url($path),
                 'sort_order' => $index,
             ]);
+
+            ProcessFieldMedia::dispatch($media->id);
         }
+    }
+
+    public function reprocess(Request $request, Campaign $campaign, FieldReport $fieldReport): JsonResponse
+    {
+        if ($fieldReport->campaign_id !== $campaign->id) {
+            return response()->json(['message' => 'Report not found.'], 404);
+        }
+
+        $this->authorize('update', [FieldReport::class, $campaign, $fieldReport]);
+
+        $mediaItems = $fieldReport->media;
+        if ($mediaItems->isEmpty()) {
+            return response()->json(['message' => 'No media to process.'], 422);
+        }
+
+        foreach ($mediaItems as $media) {
+            $media->update([
+                'processing_status' => 'pending',
+                'processing_result' => null,
+            ]);
+            ProcessFieldMedia::dispatch($media->id);
+        }
+
+        $fieldReport->update(['status' => 'submitted']);
+
+        return response()->json([
+            'message' => 'Reprocessing started for ' . $mediaItems->count() . ' file(s).',
+        ]);
     }
 }
