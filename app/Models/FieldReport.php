@@ -7,26 +7,35 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class FieldAgent extends Model
+class FieldReport extends Model
 {
     use Auditable;
 
     protected $fillable = [
         'campaign_id',
         'user_id',
-        'agent_code',
-        'status',
+        'field_agent_id',
+        'type',
+        'title',
+        'body',
+        'latitude',
+        'longitude',
         'ward',
         'constituency',
         'county',
-        'polling_station',
-        'phone',
-        'notes',
-        'last_active_at',
+        'status',
+        'captured_at',
+        'client_id',
+        'tags',
+        'metadata',
     ];
 
     protected $casts = [
-        'last_active_at' => 'datetime',
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
+        'captured_at' => 'datetime',
+        'tags' => 'array',
+        'metadata' => 'array',
     ];
 
     public function campaign(): BelongsTo
@@ -39,15 +48,14 @@ class FieldAgent extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function checkIns(): HasMany
+    public function fieldAgent(): BelongsTo
     {
-        return $this->hasMany(CheckIn::class, 'user_id', 'user_id')
-            ->where('campaign_id', $this->campaign_id);
+        return $this->belongsTo(FieldAgent::class);
     }
 
-    public function fieldReports(): HasMany
+    public function media(): HasMany
     {
-        return $this->hasMany(FieldReport::class);
+        return $this->hasMany(FieldReportMedia::class)->orderBy('sort_order');
     }
 
     public function getAuditCampaignId(): ?int

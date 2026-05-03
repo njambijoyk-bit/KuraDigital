@@ -115,6 +115,11 @@ class Campaign extends Model
         return $this->hasMany(CheckIn::class);
     }
 
+    public function fieldReports(): HasMany
+    {
+        return $this->hasMany(FieldReport::class);
+    }
+
     public function ancestors(): array
     {
         $ancestors = [];
