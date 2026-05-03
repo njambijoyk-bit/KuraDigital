@@ -25,6 +25,8 @@ use App\Http\Controllers\Api\V1\MessagingController;
 use App\Http\Controllers\Api\V1\FinanceController;
 use App\Http\Controllers\Api\V1\MpesaWebhookController;
 use App\Http\Controllers\Api\V1\ElectionDayController;
+use App\Http\Controllers\Api\V1\ReportsController;
+use App\Http\Controllers\Api\V1\AnalyticsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -322,6 +324,22 @@ Route::prefix('v1')->group(function () {
             Route::post('/election-day/incidents/{incident}/resolve', [ElectionDayController::class, 'incidentsResolve']);
             Route::post('/election-day/incidents/{incident}/escalate', [ElectionDayController::class, 'incidentsEscalate']);
             Route::delete('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsDestroy']);
+
+            // --- Phase 1I: Reports & Analytics ---
+
+            // Reports
+            Route::get('/reports', [ReportsController::class, 'index']);
+            Route::post('/reports/generate', [ReportsController::class, 'generate']);
+            Route::get('/reports/export', [ReportsController::class, 'export']);
+            Route::get('/reports/{report}', [ReportsController::class, 'show']);
+            Route::delete('/reports/{report}', [ReportsController::class, 'destroy']);
+
+            // Analytics
+            Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
+            Route::get('/analytics/voter-growth', [AnalyticsController::class, 'voterGrowth']);
+            Route::get('/analytics/field-activity', [AnalyticsController::class, 'fieldActivity']);
+            Route::get('/analytics/finance-trends', [AnalyticsController::class, 'financeTrends']);
+            Route::get('/analytics/geographic', [AnalyticsController::class, 'geographicBreakdown']);
         });
     });
 });
