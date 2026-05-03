@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\StrategyController;
 use App\Http\Controllers\Api\V1\MessagingController;
 use App\Http\Controllers\Api\V1\FinanceController;
 use App\Http\Controllers\Api\V1\MpesaWebhookController;
+use App\Http\Controllers\Api\V1\ElectionDayController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -290,6 +291,37 @@ Route::prefix('v1')->group(function () {
             // M-Pesa STK Push
             Route::post('/finance/mpesa/stk-push', [FinanceController::class, 'mpesaStkPush']);
             Route::post('/finance/mpesa/stk-query', [FinanceController::class, 'mpesaStkQuery']);
+
+            // --- Phase 1H: Election Day ---
+
+            // Polling stations
+            Route::get('/election-day/stations', [ElectionDayController::class, 'stationsIndex']);
+            Route::post('/election-day/stations', [ElectionDayController::class, 'stationsStore']);
+            Route::get('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsShow']);
+            Route::put('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsUpdate']);
+            Route::delete('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsDestroy']);
+
+            // Tally results
+            Route::get('/election-day/tallies', [ElectionDayController::class, 'talliesIndex']);
+            Route::post('/election-day/tallies', [ElectionDayController::class, 'talliesStore']);
+            Route::get('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesShow']);
+            Route::put('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesUpdate']);
+            Route::post('/election-day/tallies/{tallyResult}/verify', [ElectionDayController::class, 'talliesVerify']);
+            Route::post('/election-day/tallies/{tallyResult}/dispute', [ElectionDayController::class, 'talliesDispute']);
+            Route::delete('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesDestroy']);
+
+            // Tally board + command centre
+            Route::get('/election-day/tally-board', [ElectionDayController::class, 'tallyBoard']);
+            Route::get('/election-day/command-centre', [ElectionDayController::class, 'commandCentre']);
+
+            // Incidents
+            Route::get('/election-day/incidents', [ElectionDayController::class, 'incidentsIndex']);
+            Route::post('/election-day/incidents', [ElectionDayController::class, 'incidentsStore']);
+            Route::get('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsShow']);
+            Route::put('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsUpdate']);
+            Route::post('/election-day/incidents/{incident}/resolve', [ElectionDayController::class, 'incidentsResolve']);
+            Route::post('/election-day/incidents/{incident}/escalate', [ElectionDayController::class, 'incidentsEscalate']);
+            Route::delete('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsDestroy']);
         });
     });
 });

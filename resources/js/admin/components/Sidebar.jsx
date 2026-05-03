@@ -23,6 +23,7 @@ import {
     LightBulbIcon,
     ChatBubbleLeftRightIcon,
     BanknotesIcon,
+    FlagIcon,
 } from '@heroicons/react/24/outline';
 import useCampaignPermissions from '../hooks/useCampaignPermissions';
 
@@ -45,6 +46,7 @@ const campaignNav = [
     { to: 'strategy', icon: LightBulbIcon, label: 'Strategy', requiredPermission: 'strategy.view' },
     { to: 'messaging', icon: ChatBubbleLeftRightIcon, label: 'Messaging', requiredPermission: 'messaging.view' },
     { to: 'finance', icon: BanknotesIcon, label: 'Finance', requiredPermission: 'finance.view' },
+    { to: 'election-day', icon: FlagIcon, label: 'Election Day', requiredPermission: 'eday.view' },
     { to: 'media', icon: FilmIcon, label: 'Media Library', requiredPermission: 'media.view' },
     { to: 'audit', icon: ClipboardDocumentListIcon, label: 'Audit Log', requiredPermission: 'audit.view' },
 ];
