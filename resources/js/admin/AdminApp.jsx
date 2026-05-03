@@ -28,6 +28,7 @@ const SurveysPage = lazy(() => import('./pages/SurveysPage'));
 const StrategyPage = lazy(() => import('./pages/StrategyPage'));
 const MessagingPage = lazy(() => import('./pages/MessagingPage'));
 const FinancePage = lazy(() => import('./pages/FinancePage'));
+const ElectionDayPage = lazy(() => import('./pages/ElectionDayPage'));
 
 function Loading() {
     return (
@@ -82,6 +83,7 @@ export default function AdminApp() {
                     <Route path="strategy" element={<RequirePermission permission="strategy.view"><StrategyPage /></RequirePermission>} />
                     <Route path="messaging" element={<RequirePermission permission="messaging.view"><MessagingPage /></RequirePermission>} />
                     <Route path="finance" element={<RequirePermission permission="finance.view"><FinancePage /></RequirePermission>} />
+                    <Route path="election-day" element={<RequirePermission permission="eday.view"><ElectionDayPage /></RequirePermission>} />
                     <Route path="media" element={<RequirePermission permission="media.view"><MediaPage /></RequirePermission>} />
                     <Route path="audit" element={<RequirePermission permission="audit.view"><AuditLogPage /></RequirePermission>} />
                 </Route>
