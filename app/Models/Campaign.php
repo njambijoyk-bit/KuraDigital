@@ -120,6 +120,30 @@ class Campaign extends Model
         return $this->hasMany(FieldReport::class);
     }
 
+    public function strategyNotes(): HasMany
+    {
+        return $this->hasMany(StrategyNote::class);
+    }
+
+    public function wardTargets(): HasMany
+    {
+        return $this->hasMany(WardTarget::class);
+    }
+
+    public function polls(): HasMany
+    {
+        return $this->hasMany(Poll::class);
+    }
+
+    public function messageTemplates(): HasMany
+    {
+        return $this->hasMany(MessageTemplate::class);
+    }
+
+    public function messageCampaigns(): HasMany
+    {
+        return $this->hasMany(MessageCampaign::class);
+    }
     public function ancestors(): array
     {
         $ancestors = [];
