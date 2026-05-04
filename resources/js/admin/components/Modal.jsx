@@ -2,7 +2,8 @@ import React from 'react';
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
-export default function Modal({ open, onClose, title, children, size = 'md' }) {
+export default function Modal({ open, isOpen, onClose, title, children, size = 'md' }) {
+    const isVisible = !!(open ?? isOpen);
     const sizes = {
         sm: 'max-w-md',
         md: 'max-w-lg',
@@ -11,7 +12,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
     };
 
     return (
-        <Dialog open={open} onClose={onClose} className="relative z-50" transition>
+        <Dialog open={isVisible} onClose={onClose} className="relative z-50" transition>
             <DialogBackdrop
                 transition
                 className="fixed inset-0 bg-black/30 transition ease-out duration-200 data-[closed]:opacity-0"
