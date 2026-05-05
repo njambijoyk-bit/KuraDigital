@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\OpponentController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\SiteSettingsController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\FieldOperationsController;
 use App\Http\Controllers\Api\V1\VoterController;
 use App\Http\Controllers\Api\V1\VolunteerController;
 use App\Http\Controllers\Api\V1\FieldAgentController;
@@ -174,6 +175,25 @@ Route::prefix('v1')->group(function () {
             Route::get('/voters/{voter}', [VoterController::class, 'show']);
             Route::put('/voters/{voter}', [VoterController::class, 'update']);
             Route::delete('/voters/{voter}', [VoterController::class, 'destroy']);
+
+            // Field Operations — Canvassing Assignments
+            Route::get('/field/assignments', [FieldOperationsController::class, 'assignments']);
+            Route::post('/field/assignments', [FieldOperationsController::class, 'storeAssignment']);
+            Route::get('/field/assignments/{assignment}', [FieldOperationsController::class, 'showAssignment']);
+            Route::put('/field/assignments/{assignment}', [FieldOperationsController::class, 'updateAssignment']);
+            Route::delete('/field/assignments/{assignment}', [FieldOperationsController::class, 'destroyAssignment']);
+
+            // Field Operations — Voter Interactions
+            Route::get('/field/interactions', [FieldOperationsController::class, 'interactions']);
+            Route::post('/field/interactions', [FieldOperationsController::class, 'storeInteraction']);
+            Route::get('/field/interactions/{interaction}', [FieldOperationsController::class, 'showInteraction']);
+
+            // Field Operations — Agent Check-ins
+            Route::get('/field/check-ins', [FieldOperationsController::class, 'checkIns']);
+            Route::post('/field/check-ins', [FieldOperationsController::class, 'storeCheckIn']);
+
+            // Field Operations — Stats
+            Route::get('/field/stats', [FieldOperationsController::class, 'stats']);
 
             // Opponents
             Route::get('/opponents', [OpponentController::class, 'index']);

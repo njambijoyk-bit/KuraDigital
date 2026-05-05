@@ -185,6 +185,21 @@ class Campaign extends Model
         return $this->hasMany(Report::class);
     }
 
+    public function canvassingAssignments(): HasMany
+    {
+        return $this->hasMany(CanvassingAssignment::class);
+    }
+
+    public function voterInteractions(): HasMany
+    {
+        return $this->hasMany(VoterInteraction::class);
+    }
+
+    public function agentCheckIns(): HasMany
+    {
+        return $this->hasMany(AgentCheckIn::class);
+    }
+
     public function ancestors(): array
     {
         $ancestors = [];
