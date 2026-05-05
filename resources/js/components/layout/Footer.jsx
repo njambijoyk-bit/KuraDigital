@@ -1,10 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import axios from 'axios';
 import useSiteStore from '../../stores/useSiteStore';
 
 export default function Footer() {
     const { slug } = useParams();
     const { site } = useSiteStore();
+    const [nlEmail, setNlEmail] = useState('');
+    const [nlMsg, setNlMsg] = useState(null);
+    const [nlLoading, setNlLoading] = useState(false);
+
+    const handleNewsletter = async (e) => {
+        e.preventDefault();
+        if (!site?.id || !nlEmail.trim()) return;
+        setNlLoading(true); setNlMsg(null);
+        try {
+            const { data } = await axios.post(`/api/sites/${site.id}/newsletter`, { email: nlEmail });
+            setNlMsg({ type: 'success', text: data.message });
+            setNlEmail('');
+        } catch (err) {
+            setNlMsg({ type: 'error', text: err.response?.data?.message || 'Failed to subscribe' });
+        }
+        setNlLoading(false);
+    };
     const base = `/${slug}`;
     const year = new Date().getFullYear();
 
@@ -68,6 +86,33 @@ export default function Footer() {
                                     <span>WhatsApp</span>
                                 </a>
                             </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Newsletter Subscription */}
+                <div className="border-t border-gray-700 mt-8 pt-8 pb-2">
+                    <div className="max-w-md mx-auto text-center">
+                        <h4 className="text-white font-semibold mb-2">Stay Updated</h4>
+                        <p className="text-gray-400 text-sm mb-4">Subscribe to our newsletter for the latest campaign updates.</p>
+                        <form onSubmit={handleNewsletter} className="flex gap-2">
+                            <input
+                                type="email"
+                                value={nlEmail}
+                                onChange={(e) => setNlEmail(e.target.value)}
+                                placeholder="Your email address"
+                                required
+                                className="flex-1 rounded-lg border-0 bg-dark-800 text-white px-4 py-2.5 text-sm placeholder:text-gray-500 focus:ring-2 focus:ring-primary-500"
+                            />
+                            <button type="submit" disabled={nlLoading}
+                                className="bg-primary-600 hover:bg-primary-500 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition disabled:opacity-50">
+                                {nlLoading ? '...' : 'Subscribe'}
+                            </button>
+                        </form>
+                        {nlMsg && (
+                            <p className={`text-sm mt-2 ${nlMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                                {nlMsg.text}
+                            </p>
                         )}
                     </div>
                 </div>

@@ -1,20 +1,21 @@
 import React, { useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import useSiteStore from '../stores/useSiteStore';
 import useContentStore from '../stores/useContentStore';
 
-function EventCard({ event }) {
+function EventCard({ event, slug }) {
     const date = new Date(event.date);
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     return (
-        <div className="card flex flex-col sm:flex-row overflow-hidden">
+        <Link to={`/${slug}/events/${event.id}`} className="card flex flex-col sm:flex-row overflow-hidden group hover:shadow-md transition block">
             <div className="sm:w-24 bg-primary-600 text-white flex sm:flex-col items-center justify-center p-4 gap-2 sm:gap-0">
                 <span className="text-sm font-semibold uppercase">{monthNames[date.getMonth()]}</span>
                 <span className="text-3xl font-bold">{date.getDate()}</span>
                 <span className="text-xs">{date.getFullYear()}</span>
             </div>
             <div className="p-5 flex-1">
-                <h3 className="font-heading font-bold text-lg mb-1">{event.title}</h3>
+                <h3 className="font-heading font-bold text-lg mb-1 group-hover:text-primary-600 transition">{event.title}</h3>
                 <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
                     <span className="flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -26,8 +27,9 @@ function EventCard({ event }) {
                     </span>
                 </div>
                 <p className="text-gray-600 text-sm">{event.description}</p>
+                <span className="inline-block mt-3 text-sm text-primary-600 font-medium group-hover:underline">View details & RSVP &rarr;</span>
             </div>
-        </div>
+        </Link>
     );
 }
 
@@ -38,6 +40,7 @@ const defaultEvents = [
 ];
 
 export default function EventsPage() {
+    const { slug } = useParams();
     const { site } = useSiteStore();
     const { events, fetchEvents } = useContentStore();
 
@@ -61,7 +64,7 @@ export default function EventsPage() {
             <section className="py-16 bg-gray-50">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
                     {displayEvents.map((event) => (
-                        <EventCard key={event.id} event={event} />
+                        <EventCard key={event.id} event={event} slug={slug} />
                     ))}
                     {displayEvents.length === 0 && (
                         <p className="text-center text-gray-500 py-12">No upcoming events. Check back soon!</p>
