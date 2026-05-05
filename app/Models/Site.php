@@ -98,4 +98,9 @@ class Site extends Model
     {
         return $this->hasMany(ContactMessage::class);
     }
+
+    public function newsletterSubscribers(): HasMany
+    {
+        return $this->hasMany(NewsletterSubscriber::class);
+    }
 }

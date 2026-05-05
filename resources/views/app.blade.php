@@ -3,10 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Kura Digital — White-label campaign websites for political candidates">
-    <title>Kura Digital</title>
+    <meta name="description" content="{{ $meta['description'] ?? 'Kura Digital — White-label campaign websites for political candidates' }}">
+    <title>{{ $meta['title'] ?? 'Kura Digital' }}</title>
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ $meta['title'] ?? 'Kura Digital' }}">
+    <meta property="og:description" content="{{ $meta['description'] ?? 'Kura Digital — White-label campaign websites for political candidates' }}">
+    @if(!empty($meta['image']))
+    <meta property="og:image" content="{{ $meta['image'] }}">
+    @endif
+    @if(!empty($meta['url']))
+    <meta property="og:url" content="{{ $meta['url'] }}">
+    @endif
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $meta['title'] ?? 'Kura Digital' }}">
+    <meta name="twitter:description" content="{{ $meta['description'] ?? 'Kura Digital — White-label campaign websites for political candidates' }}">
+    @if(!empty($meta['image']))
+    <meta name="twitter:image" content="{{ $meta['image'] }}">
+    @endif
+
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="{{ $meta['color'] ?? '#4f46e5' }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">

@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useParams } from 'react-router-dom';
 import Layout from './components/layout/Layout';
+import PlatformHomePage from './pages/PlatformHomePage';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ManifestoPage from './pages/ManifestoPage';
 import EventsPage from './pages/EventsPage';
+import EventDetailPage from './pages/EventDetailPage';
 import NewsPage from './pages/NewsPage';
+import NewsDetailPage from './pages/NewsDetailPage';
 import GalleryPage from './pages/GalleryPage';
 import ContactPage from './pages/ContactPage';
 import VolunteerPage from './pages/VolunteerPage';
@@ -52,7 +55,9 @@ function SiteWrapper() {
                 <Route path="about" element={<AboutPage />} />
                 <Route path="manifesto" element={<ManifestoPage />} />
                 <Route path="events" element={<EventsPage />} />
+                <Route path="events/:eventId" element={<EventDetailPage />} />
                 <Route path="news" element={<NewsPage />} />
+                <Route path="news/:articleId" element={<NewsDetailPage />} />
                 <Route path="gallery" element={<GalleryPage />} />
                 <Route path="contact" element={<ContactPage />} />
                 <Route path="volunteer" element={<VolunteerPage />} />
@@ -67,6 +72,7 @@ function SiteWrapper() {
 export default function App() {
     return (
         <Routes>
+            <Route path="/" element={<PlatformHomePage />} />
             <Route path="/admin/*" element={<AdminApp />} />
             <Route path="/:slug/*" element={<SiteWrapper />} />
             <Route path="*" element={<NotFoundPage />} />

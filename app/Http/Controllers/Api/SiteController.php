@@ -9,6 +9,35 @@ use Illuminate\Http\Request;
 
 class SiteController extends Controller
 {
+    public function index(Request $request)
+    {
+        $query = Site::where('is_active', true);
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('candidate_name', 'like', "%{$search}%")
+                  ->orWhere('position', 'like', "%{$search}%")
+                  ->orWhere('constituency', 'like', "%{$search}%")
+                  ->orWhere('county', 'like', "%{$search}%")
+                  ->orWhere('party', 'like', "%{$search}%");
+            });
+        }
+
+        if ($county = $request->query('county')) {
+            $query->where('county', $county);
+        }
+
+        if ($position = $request->query('position')) {
+            $query->where('position', $position);
+        }
+
+        $sites = $query->orderBy('candidate_name')
+            ->select('id', 'slug', 'candidate_name', 'position', 'constituency', 'county', 'party', 'slogan', 'primary_color', 'portrait_url', 'logo_url')
+            ->get();
+
+        return response()->json(['data' => $sites]);
+    }
+
     public function show(string $slug)
     {
         $site = Site::where('slug', $slug)
@@ -63,6 +92,46 @@ class SiteController extends Controller
         ]);
     }
 
+    public function showNewsArticle(string $siteId, string $articleId)
+    {
+        $site = Site::findOrFail($siteId);
+
+        $article = $site->newsArticles()
+            ->where('id', $articleId)
+            ->firstOrFail();
+
+        $article->load('author:id,name');
+
+        return response()->json(['data' => $article]);
+    }
+
+    public function showEvent(string $siteId, string $eventId)
+    {
+        $site = Site::findOrFail($siteId);
+
+        $event = $site->events()
+            ->where('id', $eventId)
+            ->firstOrFail();
+
+        return response()->json(['data' => $event]);
+    }
+
+    public function rsvpEvent(Request $request, string $siteId, string $eventId)
+    {
+        $site = Site::findOrFail($siteId);
+        $event = $site->events()->where('id', $eventId)->firstOrFail();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:50',
+            'email' => 'nullable|email|max:255',
+        ]);
+
+        $event->rsvps()->create($validated);
+
+        return response()->json(['message' => 'RSVP confirmed! We look forward to seeing you.'], 201);
+    }
+
     public function storeContact(Request $request, string $siteId)
     {
         $site = Site::findOrFail($siteId);
@@ -95,6 +164,30 @@ class SiteController extends Controller
         $site->volunteers()->create($validated);
 
         return response()->json(['message' => 'Thank you for volunteering!'], 201);
+    }
+
+    public function subscribeNewsletter(Request $request, string $siteId)
+    {
+        $site = Site::findOrFail($siteId);
+
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+            'name' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:50',
+        ]);
+
+        $existing = $site->newsletterSubscribers()->where('email', $validated['email'])->first();
+        if ($existing) {
+            if (!$existing->is_active) {
+                $existing->update(['is_active' => true]);
+                return response()->json(['message' => 'Welcome back! You have been re-subscribed.']);
+            }
+            return response()->json(['message' => 'You are already subscribed!']);
+        }
+
+        $site->newsletterSubscribers()->create($validated);
+
+        return response()->json(['message' => 'Thank you for subscribing!'], 201);
     }
 
     public function registerSupporter(Request $request, string $siteId)

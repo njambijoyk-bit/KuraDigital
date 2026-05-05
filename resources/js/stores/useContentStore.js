@@ -29,6 +29,15 @@ const useContentStore = create((set) => ({
         }
     },
 
+    fetchNewsArticle: async (siteId, articleId) => {
+        try {
+            const { data } = await axios.get(`/api/sites/${siteId}/news/${articleId}`);
+            return data.data;
+        } catch {
+            return null;
+        }
+    },
+
     fetchNews: async (siteId) => {
         set((s) => ({ loading: { ...s.loading, news: true } }));
         try {

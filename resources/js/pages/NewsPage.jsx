@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import useSiteStore from '../stores/useSiteStore';
 import useContentStore from '../stores/useContentStore';
 
@@ -9,6 +10,7 @@ const defaultNews = [
 ];
 
 export default function NewsPage() {
+    const { slug } = useParams();
     const { site } = useSiteStore();
     const { news, fetchNews } = useContentStore();
 
@@ -33,7 +35,7 @@ export default function NewsPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {displayNews.map((article) => (
-                            <article key={article.id} className="card">
+                            <Link key={article.id} to={`/${slug}/news/${article.id}`} className="card group hover:shadow-md transition block">
                                 {article.image_url ? (
                                     <img src={article.image_url} alt={article.title} className="w-full h-48 object-cover" />
                                 ) : (
@@ -45,10 +47,11 @@ export default function NewsPage() {
                                     <span className="text-xs text-primary-600 font-semibold">
                                         {new Date(article.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                                     </span>
-                                    <h3 className="font-heading font-bold text-lg mt-2 mb-2">{article.title}</h3>
+                                    <h3 className="font-heading font-bold text-lg mt-2 mb-2 group-hover:text-primary-600 transition">{article.title}</h3>
                                     <p className="text-gray-600 text-sm">{article.excerpt}</p>
+                                    <span className="inline-block mt-3 text-sm text-primary-600 font-medium group-hover:underline">Read more &rarr;</span>
                                 </div>
-                            </article>
+                            </Link>
                         ))}
                     </div>
                 </div>
