@@ -16,6 +16,7 @@ const NewsPage = lazy(() => import('./pages/NewsPage'));
 const GalleryPage = lazy(() => import('./pages/GalleryPage'));
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
 const VotersPage = lazy(() => import('./pages/VotersPage'));
+const CanvassingPage = lazy(() => import('./pages/CanvassingPage'));
 const VolunteersPage = lazy(() => import('./pages/VolunteersPage'));
 const ContactsPage = lazy(() => import('./pages/ContactsPage'));
 const MediaPage = lazy(() => import('./pages/MediaPage'));
@@ -75,6 +76,7 @@ export default function AdminApp() {
                     <Route path="gallery" element={<RequirePermission permission="gallery.view"><GalleryPage /></RequirePermission>} />
                     <Route path="projects" element={<RequirePermission permission="projects.view"><ProjectsPage /></RequirePermission>} />
                     <Route path="voters" element={<RequirePermission permission="voters.view"><VotersPage /></RequirePermission>} />
+                    <Route path="canvassing" element={<RequirePermission permission="field.view"><CanvassingPage /></RequirePermission>} />
                     <Route path="volunteers" element={<RequirePermission permission="volunteers.view"><VolunteersPage /></RequirePermission>} />
                     <Route path="contacts" element={<RequirePermission permission="contacts.view"><ContactsPage /></RequirePermission>} />
                     <Route path="opponents" element={<RequirePermission permission="opponents.view"><OpponentsPage /></RequirePermission>} />

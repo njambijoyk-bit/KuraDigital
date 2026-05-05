@@ -31,6 +31,7 @@ use App\Models\PollingStation;
 use App\Models\TallyResult;
 use App\Models\Incident;
 use App\Models\Report;
+use App\Models\CanvassingAssignment;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CampaignMemberPolicy;
 use App\Policies\CampaignPolicy;
@@ -60,6 +61,7 @@ use App\Policies\PollingStationPolicy;
 use App\Policies\TallyResultPolicy;
 use App\Policies\IncidentPolicy;
 use App\Policies\ReportPolicy;
+use App\Policies\FieldOperationsPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -77,6 +79,7 @@ class AuthServiceProvider extends ServiceProvider
         Project::class => ProjectPolicy::class,
         Volunteer::class => VolunteerPolicy::class,
         Voter::class => VoterPolicy::class,
+        CanvassingAssignment::class => FieldOperationsPolicy::class,
         ContactMessage::class => ContactMessagePolicy::class,
         FieldAgent::class => FieldAgentPolicy::class,
         Survey::class => SurveyPolicy::class,
