@@ -315,6 +315,9 @@ Route::prefix('v1')->group(function () {
             Route::delete('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsDestroy']);
             Route::post('/messaging/campaigns/{messageCampaign}/approve', [MessagingController::class, 'campaignsApprove']);
             Route::post('/messaging/campaigns/{messageCampaign}/send', [MessagingController::class, 'campaignsSend']);
+            Route::get('/messaging/campaigns/{messageCampaign}/logs', [MessagingController::class, 'campaignLogs']);
+            Route::get('/messaging/audience-count', [MessagingController::class, 'audienceCount']);
+            Route::get('/messaging/stats', [MessagingController::class, 'campaignsStats']);
 
             // --- Phase 1G: Finance ---
 

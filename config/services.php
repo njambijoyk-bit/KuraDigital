@@ -39,6 +39,18 @@ return [
         'api_key' => env('GOOGLE_VISION_API_KEY'),
     ],
 
+    'africastalking' => [
+        'api_key' => env('AFRICASTALKING_API_KEY'),
+        'username' => env('AFRICASTALKING_USERNAME', 'sandbox'),
+        'sender_id' => env('AFRICASTALKING_SENDER_ID', ''),
+    ],
+
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'from_number' => env('TWILIO_FROM_NUMBER'),
+    ],
+
     'mpesa' => [
         'environment' => env('MPESA_ENVIRONMENT', 'sandbox'),
         'consumer_key' => env('MPESA_CONSUMER_KEY'),
