@@ -28,6 +28,7 @@ import {
     ChartBarIcon,
     PresentationChartLineIcon,
     EyeIcon,
+    GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import useAuthStore from '../stores/useAuthStore';
@@ -55,6 +56,7 @@ const campaignNav = [
     { to: 'election-day', icon: FlagIcon, label: 'Election Day', requiredPermission: 'eday.view' },
     { to: 'reports', icon: ChartBarIcon, label: 'Reports', requiredPermission: 'reports.view' },
     { to: 'analytics', icon: PresentationChartLineIcon, label: 'Analytics', requiredPermission: 'analytics.view' },
+    { to: 'map', icon: GlobeAltIcon, label: 'Map', requiredPermission: 'field.view' },
     { to: 'media', icon: FilmIcon, label: 'Media Library', requiredPermission: 'media.view' },
     { to: 'audit', icon: ClipboardDocumentListIcon, label: 'Audit Log', requiredPermission: 'audit.view' },
 ];

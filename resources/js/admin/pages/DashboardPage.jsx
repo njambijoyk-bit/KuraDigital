@@ -18,6 +18,7 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import StatsCard from '../components/StatsCard';
+import DashboardMap from '../components/map/DashboardMap';
 
 export default function DashboardPage() {
     const { campaignId } = useParams();
@@ -164,6 +165,25 @@ export default function DashboardPage() {
                         <span className="text-sm font-medium text-gray-700">{action.label}</span>
                     </Link>
                 ))}
+            </div>
+
+            {/* Map overview */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-heading font-semibold text-gray-900">Activity Map</h3>
+                    <Link to="map" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        Full Map &rarr;
+                    </Link>
+                </div>
+                <div className="p-4">
+                    <DashboardMap campaignId={campaignId} />
+                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Check-ins</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> Reports</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Stations</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500" /> Incidents</span>
+                    </div>
+                </div>
             </div>
 
             {/* Recent activity */}
