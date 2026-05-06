@@ -7,6 +7,8 @@ use App\Models\Campaign;
 use App\Models\Donation;
 use App\Models\MpesaTransaction;
 use App\Models\Site;
+use App\Models\Survey;
+use App\Models\SurveyResponse;
 use App\Models\TallyResult;
 use App\Models\Voter;
 use App\Services\MpesaDarajaService;
@@ -335,6 +337,78 @@ class SiteController extends Controller
             'message' => 'Check your phone to complete the M-Pesa payment.',
             'checkout_request_id' => $result['checkout_request_id'],
         ]);
+    }
+
+    public function publicSurveys(string $siteId)
+    {
+        $site = Site::findOrFail($siteId);
+        $campaign = Campaign::where('site_id', $site->id)->first();
+
+        if (!$campaign) {
+            return response()->json(['data' => []]);
+        }
+
+        $surveys = $campaign->surveys()
+            ->where('status', 'active')
+            ->select('id', 'title', 'description', 'questions', 'ends_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json(['data' => $surveys]);
+    }
+
+    public function publicSurveyShow(string $siteId, int $surveyId)
+    {
+        $site = Site::findOrFail($siteId);
+        $campaign = Campaign::where('site_id', $site->id)->first();
+
+        if (!$campaign) {
+            return response()->json(['message' => 'Survey not found.'], 404);
+        }
+
+        $survey = Survey::where('campaign_id', $campaign->id)
+            ->where('id', $surveyId)
+            ->where('status', 'active')
+            ->select('id', 'title', 'description', 'questions', 'ends_at')
+            ->firstOrFail();
+
+        return response()->json(['data' => $survey]);
+    }
+
+    public function publicSurveySubmit(Request $request, string $siteId, int $surveyId)
+    {
+        $site = Site::findOrFail($siteId);
+        $campaign = Campaign::where('site_id', $site->id)->first();
+
+        if (!$campaign) {
+            return response()->json(['message' => 'Survey not found.'], 404);
+        }
+
+        $survey = Survey::where('campaign_id', $campaign->id)
+            ->where('id', $surveyId)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'answers' => ['required', 'array'],
+            'answers.*.question_id' => ['required', 'string'],
+            'answers.*.value' => ['required'],
+            'respondent_name' => ['nullable', 'string', 'max:255'],
+            'ward' => ['nullable', 'string', 'max:255'],
+            'constituency' => ['nullable', 'string', 'max:255'],
+            'county' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        SurveyResponse::create([
+            'survey_id' => $survey->id,
+            'submitted_by' => null,
+            'answers' => $validated['answers'],
+            'ward' => $validated['ward'] ?? null,
+            'constituency' => $validated['constituency'] ?? null,
+            'county' => $validated['county'] ?? null,
+        ]);
+
+        return response()->json(['message' => 'Thank you! Your response has been recorded.'], 201);
     }
 
     public function electionResults(string $siteId)
