@@ -50,6 +50,11 @@ class FieldAgent extends Model
         return $this->hasMany(FieldReport::class);
     }
 
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(AgentSchedule::class);
+    }
+
     public function getAuditCampaignId(): ?int
     {
         return $this->campaign_id;

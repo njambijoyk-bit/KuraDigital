@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\FieldAgentController;
 use App\Http\Controllers\Api\V1\SurveyController;
 use App\Http\Controllers\Api\V1\CheckInController;
 use App\Http\Controllers\Api\V1\FieldReportController;
+use App\Http\Controllers\Api\V1\AgentScheduleController;
 use App\Http\Controllers\Api\V1\StrategyController;
 use App\Http\Controllers\Api\V1\MessagingController;
 use App\Http\Controllers\Api\V1\FinanceController;
@@ -233,6 +234,17 @@ Route::prefix('v1')->group(function () {
             Route::put('/field-agents/{fieldAgent}', [FieldAgentController::class, 'update']);
             Route::delete('/field-agents/{fieldAgent}', [FieldAgentController::class, 'destroy']);
             Route::post('/field-agents/{fieldAgent}/assign-station', [FieldAgentController::class, 'assignStation']);
+
+            // Agent schedules
+            Route::get('/agent-schedules', [AgentScheduleController::class, 'index']);
+            Route::post('/agent-schedules', [AgentScheduleController::class, 'store']);
+            Route::post('/agent-schedules/bulk', [AgentScheduleController::class, 'bulk']);
+            Route::get('/agent-schedules/calendar', [AgentScheduleController::class, 'calendar']);
+            Route::get('/agent-schedules/coverage', [AgentScheduleController::class, 'coverage']);
+            Route::get('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'show']);
+            Route::put('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'update']);
+            Route::delete('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'destroy']);
+            Route::post('/agent-schedules/{agentSchedule}/check-in', [AgentScheduleController::class, 'checkIn']);
 
             // Surveys
             Route::get('/surveys', [SurveyController::class, 'index']);
