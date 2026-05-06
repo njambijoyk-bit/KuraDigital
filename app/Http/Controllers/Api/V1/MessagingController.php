@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendMessageCampaign;
 use App\Models\Campaign;
 use App\Models\MessageCampaign;
+use App\Models\MessageLog;
 use App\Models\MessageTemplate;
+use App\Models\Voter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -288,11 +291,12 @@ class MessagingController extends Controller
             return response()->json(['message' => 'Campaign must be approved before sending.'], 422);
         }
 
-        // Mark as sending (actual dispatch would go through a Laravel Job in production)
         $messageCampaign->update([
             'status' => 'sending',
             'sent_at' => now(),
         ]);
+
+        SendMessageCampaign::dispatch($messageCampaign->id);
 
         return response()->json([
             'message' => 'Message campaign queued for sending.',
@@ -315,6 +319,120 @@ class MessagingController extends Controller
         $messageCampaign->delete();
 
         return response()->json(['message' => 'Message campaign deleted.']);
+    }
+
+    // =====================================================================
+    // Audience & Delivery Logs
+    // =====================================================================
+
+    public function audienceCount(Request $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('viewAny', [MessageCampaign::class, $campaign]);
+
+        $channel = $request->input('channel', 'sms');
+        $query = Voter::where('campaign_id', $campaign->id);
+
+        $filters = $request->input('filters', []);
+
+        if (!empty($filters['ward'])) {
+            $query->where('ward', $filters['ward']);
+        }
+        if (!empty($filters['county'])) {
+            $query->where('county', $filters['county']);
+        }
+        if (!empty($filters['constituency'])) {
+            $query->where('constituency', $filters['constituency']);
+        }
+        if (!empty($filters['supporter_status'])) {
+            $query->where('supporter_status', $filters['supporter_status']);
+        }
+        if (!empty($filters['tags'])) {
+            foreach ($filters['tags'] as $tag) {
+                $query->whereJsonContains('tags', $tag);
+            }
+        }
+        if (!empty($filters['gender'])) {
+            $query->where('gender', $filters['gender']);
+        }
+        if (!empty($filters['source'])) {
+            $query->where('source', $filters['source']);
+        }
+
+        if (in_array($channel, ['sms', 'whatsapp'])) {
+            $query->whereNotNull('phone')->where('phone', '!=', '');
+        } else {
+            $query->whereNotNull('email')->where('email', '!=', '');
+        }
+
+        $count = $query->count();
+
+        $byWard = (clone $query)->selectRaw('ward, count(*) as count')
+            ->groupBy('ward')
+            ->pluck('count', 'ward');
+
+        return response()->json([
+            'total' => $count,
+            'channel' => $channel,
+            'by_ward' => $byWard,
+        ]);
+    }
+
+    public function campaignLogs(Request $request, Campaign $campaign, MessageCampaign $messageCampaign): JsonResponse
+    {
+        $this->authorize('view', [MessageCampaign::class, $campaign]);
+
+        if ($messageCampaign->campaign_id !== $campaign->id) {
+            return response()->json(['message' => 'Message campaign not found.'], 404);
+        }
+
+        $query = $messageCampaign->logs()->with('voter:id,name,phone,email,ward');
+
+        if ($request->has('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $logs = $query->orderByDesc('created_at')->paginate(50);
+
+        $stats = [
+            'total' => $messageCampaign->total_recipients,
+            'sent' => $messageCampaign->sent_count,
+            'failed' => $messageCampaign->failed_count,
+            'pending' => MessageLog::where('message_campaign_id', $messageCampaign->id)->where('status', 'pending')->count(),
+            'delivered' => MessageLog::where('message_campaign_id', $messageCampaign->id)->where('status', 'delivered')->count(),
+        ];
+
+        return response()->json([
+            'logs' => $logs,
+            'stats' => $stats,
+        ]);
+    }
+
+    public function campaignsStats(Request $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('viewAny', [MessageCampaign::class, $campaign]);
+
+        $totalCampaigns = $campaign->messageCampaigns()->count();
+        $sentCampaigns = $campaign->messageCampaigns()->where('status', 'sent')->count();
+        $totalSent = $campaign->messageCampaigns()->sum('sent_count');
+        $totalFailed = $campaign->messageCampaigns()->sum('failed_count');
+        $totalRecipients = $campaign->messageCampaigns()->sum('total_recipients');
+
+        $byChannel = $campaign->messageCampaigns()
+            ->selectRaw('channel, count(*) as campaigns, sum(sent_count) as sent, sum(failed_count) as failed')
+            ->groupBy('channel')
+            ->get();
+
+        return response()->json([
+            'stats' => [
+                'total_campaigns' => $totalCampaigns,
+                'sent_campaigns' => $sentCampaigns,
+                'total_sent' => (int) $totalSent,
+                'total_failed' => (int) $totalFailed,
+                'total_recipients' => (int) $totalRecipients,
+                'delivery_rate' => $totalRecipients > 0 ? round(($totalSent / $totalRecipients) * 100, 1) : 0,
+                'by_channel' => $byChannel,
+            ],
+        ]);
     }
 
     // =====================================================================
