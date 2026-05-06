@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Campaign;
+use App\Models\Donation;
 use App\Models\Site;
 use Illuminate\Database\Seeder;
 
@@ -32,6 +34,9 @@ class DemoSiteSeeder extends Seeder
             'twitter_url' => 'https://twitter.com/johnkamau',
             'instagram_url' => 'https://instagram.com/johnkamau',
             'donation_info' => '<p><strong>M-Pesa Paybill:</strong> 123456</p><p><strong>Account Name:</strong> Kamau Campaign Fund</p>',
+            'donation_goal' => 5000000.00,
+            'donations_enabled' => true,
+            'mpesa_paybill' => '123456',
             'pillars' => [
                 ['icon' => '📚', 'title' => 'Education', 'description' => 'Quality education for every child in Starehe.'],
                 ['icon' => '🏥', 'title' => 'Healthcare', 'description' => 'Accessible, affordable healthcare for all families.'],
@@ -74,5 +79,29 @@ class DemoSiteSeeder extends Seeder
             ['title' => 'Market Access Road — Gikomba', 'status' => 'ongoing', 'category' => 'Infrastructure', 'description' => 'Grading and gravelling of key market access roads.', 'impact' => '5,000 traders', 'sort_order' => 3],
             ['title' => 'Youth ICT Hub', 'status' => 'planned', 'category' => 'Youth', 'description' => 'Construction of a modern youth ICT hub with training facilities.', 'impact' => '500 youth annually', 'sort_order' => 4],
         ]);
+
+        // Seed sample donations (requires a campaign linked to this site)
+        $campaign = Campaign::where('site_id', $site->id)->first();
+        if ($campaign) {
+            $donors = [
+                ['donor_name' => 'Mary Wanjiku', 'donor_phone' => '0722111222', 'amount' => 10000, 'channel' => 'mpesa', 'donated_at' => now()->subDays(12)],
+                ['donor_name' => 'Peter Ochieng', 'donor_phone' => '0733222333', 'amount' => 25000, 'channel' => 'mpesa', 'donated_at' => now()->subDays(10)],
+                ['donor_name' => null, 'donor_phone' => '0711333444', 'amount' => 5000, 'channel' => 'mpesa', 'is_anonymous' => true, 'donated_at' => now()->subDays(8)],
+                ['donor_name' => 'Grace Akinyi', 'donor_phone' => '0700444555', 'amount' => 50000, 'channel' => 'bank_transfer', 'donated_at' => now()->subDays(6)],
+                ['donor_name' => 'James Mwangi', 'donor_phone' => '0712555666', 'amount' => 15000, 'channel' => 'mpesa', 'donated_at' => now()->subDays(4)],
+                ['donor_name' => 'Sarah Njeri', 'donor_phone' => '0723666777', 'amount' => 7500, 'channel' => 'mpesa', 'donated_at' => now()->subDays(2)],
+                ['donor_name' => 'David Kiprop', 'donor_phone' => '0734777888', 'amount' => 100000, 'channel' => 'bank_transfer', 'donated_at' => now()->subDays(1)],
+                ['donor_name' => 'Agnes Chebet', 'donor_phone' => '0745888999', 'amount' => 2000, 'channel' => 'mpesa', 'donated_at' => now()],
+            ];
+
+            foreach ($donors as $donor) {
+                Donation::create(array_merge([
+                    'campaign_id' => $campaign->id,
+                    'currency' => 'KES',
+                    'status' => 'completed',
+                    'is_anonymous' => false,
+                ], $donor));
+            }
+        }
     }
 }

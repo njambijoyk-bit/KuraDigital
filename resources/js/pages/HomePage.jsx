@@ -132,11 +132,11 @@ export default function HomePage() {
                         Join thousands of supporters who believe in a better future for our constituency.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <Link to={`${base}/volunteer`} className="bg-white font-semibold px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors shadow-lg" style={{ color: primaryColor }}>
-                            Volunteer Now
+                        <Link to={`${base}/donate`} className="bg-white font-semibold px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors shadow-lg" style={{ color: primaryColor }}>
+                            Donate Now
                         </Link>
-                        <Link to={`${base}/contact`} className="btn-outline !border-white !text-white hover:!bg-white hover:!text-gray-900 !px-8 !py-3">
-                            Contact Us
+                        <Link to={`${base}/volunteer`} className="btn-outline !border-white !text-white hover:!bg-white hover:!text-gray-900 !px-8 !py-3">
+                            Volunteer
                         </Link>
                     </div>
                 </div>

@@ -49,6 +49,8 @@ Route::post('/sites/{siteId}/newsletter', [SiteController::class, 'subscribeNews
 Route::post('/sites/{siteId}/contact', [SiteController::class, 'storeContact']);
 Route::post('/sites/{siteId}/volunteers', [SiteController::class, 'storeVolunteer']);
 Route::post('/sites/{siteId}/register-supporter', [SiteController::class, 'registerSupporter']);
+Route::get('/sites/{siteId}/donations/stats', [SiteController::class, 'donationStats']);
+Route::post('/sites/{siteId}/donate', [SiteController::class, 'donate']);
 
 /*
 |--------------------------------------------------------------------------

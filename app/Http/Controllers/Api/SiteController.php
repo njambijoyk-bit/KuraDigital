@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
+use App\Models\Donation;
+use App\Models\MpesaTransaction;
 use App\Models\Site;
 use App\Models\Voter;
+use App\Services\MpesaDarajaService;
 use Illuminate\Http\Request;
 
 class SiteController extends Controller
@@ -218,5 +222,117 @@ class SiteController extends Controller
         Voter::create($validated);
 
         return response()->json(['message' => 'Thank you for registering your support!'], 201);
+    }
+
+    public function donationStats(string $siteId)
+    {
+        $site = Site::findOrFail($siteId);
+        $campaign = Campaign::where('site_id', $site->id)->first();
+
+        $totalRaised = 0;
+        $donorCount = 0;
+        $recentDonations = [];
+
+        if ($campaign) {
+            $totalRaised = $campaign->donations()
+                ->where('status', 'completed')
+                ->sum('amount');
+
+            $donorCount = $campaign->donations()
+                ->where('status', 'completed')
+                ->count();
+
+            $recentDonations = $campaign->donations()
+                ->where('status', 'completed')
+                ->orderByDesc('donated_at')
+                ->limit(10)
+                ->get()
+                ->map(function ($d) {
+                    return [
+                        'amount' => $d->amount,
+                        'channel' => $d->channel,
+                        'donor_name' => $d->is_anonymous ? 'Anonymous' : ($d->donor_name ?: 'Supporter'),
+                        'donated_at' => $d->donated_at,
+                    ];
+                });
+        }
+
+        return response()->json([
+            'data' => [
+                'donation_goal' => $site->donation_goal,
+                'donations_enabled' => (bool) $site->donations_enabled,
+                'total_raised' => (float) $totalRaised,
+                'donor_count' => $donorCount,
+                'recent_donations' => $recentDonations,
+            ],
+        ]);
+    }
+
+    public function donate(Request $request, string $siteId)
+    {
+        $site = Site::findOrFail($siteId);
+
+        if (!$site->donations_enabled) {
+            return response()->json(['message' => 'Donations are not enabled for this campaign.'], 422);
+        }
+
+        $campaign = Campaign::where('site_id', $site->id)->first();
+        if (!$campaign) {
+            return response()->json(['message' => 'Campaign not configured for this site.'], 422);
+        }
+
+        $validated = $request->validate([
+            'phone_number' => ['required', 'string', 'max:15'],
+            'amount' => ['required', 'numeric', 'min:10', 'max:150000'],
+            'donor_name' => ['nullable', 'string', 'max:255'],
+            'donor_email' => ['nullable', 'email', 'max:255'],
+            'is_anonymous' => ['nullable', 'boolean'],
+        ]);
+
+        $mpesa = app(MpesaDarajaService::class);
+
+        if (!$mpesa->isConfigured()) {
+            // Record as manual donation when M-Pesa is not configured
+            $donation = Donation::create([
+                'campaign_id' => $campaign->id,
+                'donor_name' => $validated['is_anonymous'] ?? false ? null : ($validated['donor_name'] ?? null),
+                'donor_phone' => $validated['phone_number'],
+                'donor_email' => $validated['donor_email'] ?? null,
+                'amount' => $validated['amount'],
+                'currency' => 'KES',
+                'channel' => 'mpesa',
+                'status' => 'completed',
+                'is_anonymous' => $validated['is_anonymous'] ?? false,
+                'donated_at' => now(),
+                'notes' => 'Public site donation (M-Pesa not configured — recorded directly)',
+            ]);
+
+            return response()->json([
+                'message' => 'Thank you for your donation!',
+                'donation_id' => $donation->id,
+            ], 201);
+        }
+
+        $accountRef = 'KURA-' . $campaign->id;
+        $result = $mpesa->stkPush($validated['phone_number'], $validated['amount'], $accountRef);
+
+        if (!$result['success']) {
+            return response()->json(['message' => 'Payment initiation failed. Please try again.'], 502);
+        }
+
+        MpesaTransaction::create([
+            'campaign_id' => $campaign->id,
+            'transaction_type' => 'stk_push',
+            'merchant_request_id' => $result['merchant_request_id'],
+            'checkout_request_id' => $result['checkout_request_id'],
+            'amount' => $validated['amount'],
+            'phone_number' => $validated['phone_number'],
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'message' => 'Check your phone to complete the M-Pesa payment.',
+            'checkout_request_id' => $result['checkout_request_id'],
+        ]);
     }
 }
