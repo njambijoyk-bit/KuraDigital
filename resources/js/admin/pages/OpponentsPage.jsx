@@ -10,6 +10,8 @@ import {
     ChevronLeftIcon,
     ShieldExclamationIcon,
     ExclamationTriangleIcon,
+    ArrowPathIcon,
+    ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import PermissionGate from '../components/PermissionGate';
@@ -46,6 +48,24 @@ const clearanceColors = {
     restricted: 'bg-red-50 text-red-700',
 };
 
+const sentimentColors = {
+    positive: 'bg-green-50 text-green-700 border-green-200',
+    neutral: 'bg-gray-50 text-gray-700 border-gray-200',
+    negative: 'bg-red-50 text-red-700 border-red-200',
+};
+
+const sentimentBadgeColors = {
+    positive: 'bg-green-100 text-green-700',
+    neutral: 'bg-gray-100 text-gray-600',
+    negative: 'bg-red-100 text-red-700',
+};
+
+const sentimentBarColors = {
+    positive: 'bg-green-500',
+    neutral: 'bg-gray-400',
+    negative: 'bg-red-500',
+};
+
 export default function OpponentsPage() {
     const { campaignId } = useParams();
 
@@ -71,6 +91,12 @@ export default function OpponentsPage() {
     const [researchError, setResearchError] = useState(null);
     const { can } = useCampaignPermissions();
 
+    // Sentiment state
+    const [sentiment, setSentiment] = useState(null);
+    const [sentimentLoading, setSentimentLoading] = useState(false);
+    const [sentimentTab, setSentimentTab] = useState('overview');
+    const [reanalyzing, setReanalyzing] = useState(false);
+
     const fetchOpponents = useCallback(async () => {
         setLoading(true);
         try {
@@ -94,9 +120,41 @@ export default function OpponentsPage() {
         setResearchLoading(false);
     };
 
+    const fetchSentiment = async (opponent) => {
+        setSentimentLoading(true);
+        try {
+            const { data } = await api.get(`/campaigns/${campaignId}/opponents/${opponent.id}/sentiment`);
+            setSentiment(data);
+        } catch { /* handled */ }
+        setSentimentLoading(false);
+    };
+
     const openOpponentDetail = (opponent) => {
         setSelectedOpponent(opponent);
         fetchResearch(opponent);
+        fetchSentiment(opponent);
+    };
+
+    const handleReanalyze = async (researchId) => {
+        setReanalyzing(true);
+        try {
+            await api.post(`/campaigns/${campaignId}/opponents/${selectedOpponent.id}/research/${researchId}/reanalyze`);
+            fetchResearch(selectedOpponent);
+            fetchSentiment(selectedOpponent);
+        } catch (err) { alert(err.response?.data?.message || 'Failed to re-analyze'); }
+        setReanalyzing(false);
+    };
+
+    const handleBulkReanalyze = async () => {
+        if (!confirm('Re-analyze sentiment for all research notes?')) return;
+        setReanalyzing(true);
+        try {
+            const { data } = await api.post(`/campaigns/${campaignId}/opponents/${selectedOpponent.id}/sentiment/reanalyze-all`);
+            alert(data.message);
+            fetchResearch(selectedOpponent);
+            fetchSentiment(selectedOpponent);
+        } catch (err) { alert(err.response?.data?.message || 'Failed to re-analyze'); }
+        setReanalyzing(false);
     };
 
     // --- Opponent CRUD handlers ---
@@ -272,6 +330,17 @@ export default function OpponentsPage() {
                     )}
                 </div>
 
+                {/* Sentiment Analysis Panel */}
+                <SentimentPanel
+                    sentiment={sentiment}
+                    sentimentLoading={sentimentLoading}
+                    sentimentTab={sentimentTab}
+                    setSentimentTab={setSentimentTab}
+                    reanalyzing={reanalyzing}
+                    onBulkReanalyze={handleBulkReanalyze}
+                    can={can}
+                />
+
                 {/* Research section */}
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-heading font-semibold text-gray-900">
@@ -304,7 +373,7 @@ export default function OpponentsPage() {
                 ) : (
                     <div className="space-y-3">
                         {research.map((r) => (
-                            <div key={r.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                            <div key={r.id} className={`bg-white rounded-xl shadow-sm border p-5 ${r.sentiment_label ? sentimentColors[r.sentiment_label]?.split(' ').find(c => c.startsWith('border-')) || 'border-gray-100' : 'border-gray-100'}`}>
                                 <div className="flex items-start justify-between">
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center space-x-2 mb-1">
@@ -312,6 +381,11 @@ export default function OpponentsPage() {
                                             <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${clearanceColors[r.clearance]}`}>
                                                 {r.clearance}
                                             </span>
+                                            {r.sentiment_label && (
+                                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${sentimentBadgeColors[r.sentiment_label]}`}>
+                                                    {r.sentiment_label} {r.sentiment_score != null ? `(${r.sentiment_score > 0 ? '+' : ''}${r.sentiment_score})` : ''}
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-sm text-gray-600 whitespace-pre-line">{r.content}</p>
                                         <div className="flex items-center space-x-3 mt-3 text-xs text-gray-400">
@@ -322,6 +396,16 @@ export default function OpponentsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-1 ml-3 flex-shrink-0">
+                                        {can('opponents.edit-research') && (
+                                            <button
+                                                onClick={() => handleReanalyze(r.id)}
+                                                disabled={reanalyzing}
+                                                className="p-1.5 text-gray-400 hover:text-blue-600 rounded"
+                                                title="Re-analyze sentiment"
+                                            >
+                                                <ArrowPathIcon className={`h-4 w-4 ${reanalyzing ? 'animate-spin' : ''}`} />
+                                            </button>
+                                        )}
                                         {can('opponents.edit-research') && <button onClick={() => openResearchEdit(r)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded">
                                             <PencilIcon className="h-4 w-4" />
                                         </button>}
@@ -567,5 +651,234 @@ function OpponentForm({ form, setForm, error, submitting, onSubmit, onCancel, ed
                 </button>
             </div>
         </form>
+    );
+}
+
+function SentimentPanel({ sentiment, sentimentLoading, sentimentTab, setSentimentTab, reanalyzing, onBulkReanalyze, can }) {
+    if (sentimentLoading) {
+        return (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">Loading sentiment analysis...</p>
+            </div>
+        );
+    }
+
+    if (!sentiment) return null;
+
+    const { overall, research_breakdown, research_timeline, field_report_mentions, voter_interaction_mentions } = sentiment;
+
+    const tabs = [
+        { id: 'overview', label: 'Overview' },
+        { id: 'timeline', label: 'Timeline' },
+        { id: 'field_reports', label: `Field Reports (${field_report_mentions?.length || 0})` },
+        { id: 'interactions', label: `Voter Interactions (${voter_interaction_mentions?.length || 0})` },
+    ];
+
+    const breakdownTotal = ['positive', 'neutral', 'negative'].reduce(
+        (sum, key) => sum + (research_breakdown?.[key]?.count || 0), 0
+    );
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center space-x-2">
+                    <ChartBarIcon className="h-5 w-5 text-gray-400" />
+                    <h3 className="text-lg font-heading font-semibold text-gray-900">Sentiment Analysis</h3>
+                </div>
+                <div className="flex items-center space-x-3">
+                    {/* Overall score badge */}
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full capitalize ${sentimentBadgeColors[overall?.label || 'neutral']}`}>
+                        {overall?.label || 'neutral'} ({overall?.avg_score > 0 ? '+' : ''}{overall?.avg_score || 0})
+                    </span>
+                    <span className="text-xs text-gray-400">{overall?.total_sources || 0} sources</span>
+                    {can('opponents.edit-research') && (
+                        <button
+                            onClick={onBulkReanalyze}
+                            disabled={reanalyzing}
+                            className="btn-secondary !py-1.5 !px-3 text-xs"
+                            title="Re-analyze all research notes"
+                        >
+                            <ArrowPathIcon className={`h-3.5 w-3.5 mr-1 ${reanalyzing ? 'animate-spin' : ''}`} />
+                            Re-analyze All
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100">
+                {tabs.map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setSentimentTab(tab.id)}
+                        className={`px-4 py-2.5 text-sm font-medium transition-colors ${sentimentTab === tab.id ? 'text-primary-600 border-b-2 border-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="p-6">
+                {sentimentTab === 'overview' && (
+                    <div className="space-y-4">
+                        {/* Sentiment distribution bar */}
+                        <div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Research Note Sentiment Distribution</h4>
+                            {breakdownTotal > 0 ? (
+                                <>
+                                    <div className="flex h-6 rounded-full overflow-hidden bg-gray-100">
+                                        {['positive', 'neutral', 'negative'].map(key => {
+                                            const count = research_breakdown?.[key]?.count || 0;
+                                            const pct = breakdownTotal > 0 ? (count / breakdownTotal) * 100 : 0;
+                                            if (pct === 0) return null;
+                                            return (
+                                                <div
+                                                    key={key}
+                                                    className={`${sentimentBarColors[key]} flex items-center justify-center transition-all`}
+                                                    style={{ width: `${pct}%` }}
+                                                    title={`${key}: ${count} (${Math.round(pct)}%)`}
+                                                >
+                                                    {pct > 10 && <span className="text-xs text-white font-medium">{Math.round(pct)}%</span>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex items-center justify-center space-x-6 mt-3">
+                                        {['positive', 'neutral', 'negative'].map(key => (
+                                            <div key={key} className="flex items-center space-x-1.5">
+                                                <div className={`w-3 h-3 rounded-full ${sentimentBarColors[key]}`} />
+                                                <span className="text-xs text-gray-600 capitalize">{key}: {research_breakdown?.[key]?.count || 0}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-sm text-gray-400">No sentiment data yet. Add research notes to see analysis.</p>
+                            )}
+                        </div>
+
+                        {/* Summary stats */}
+                        <div className="grid grid-cols-3 gap-4 pt-2">
+                            {['positive', 'neutral', 'negative'].map(key => (
+                                <div key={key} className={`rounded-lg p-3 ${sentimentColors[key]}`}>
+                                    <div className="text-2xl font-bold">{research_breakdown?.[key]?.count || 0}</div>
+                                    <div className="text-xs capitalize font-medium">{key} notes</div>
+                                    {research_breakdown?.[key]?.avg_score != null && (
+                                        <div className="text-xs mt-0.5 opacity-75">
+                                            Avg: {Number(research_breakdown[key].avg_score) > 0 ? '+' : ''}{Number(research_breakdown[key].avg_score).toFixed(2)}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {sentimentTab === 'timeline' && (
+                    <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">Sentiment Over Time (Monthly Avg)</h4>
+                        {research_timeline && research_timeline.length > 0 ? (
+                            <div className="space-y-2">
+                                {research_timeline.map((point) => {
+                                    const score = Number(point.avg_score);
+                                    const label = score >= 0.3 ? 'positive' : score <= -0.3 ? 'negative' : 'neutral';
+                                    const barWidth = Math.abs(score) * 100;
+                                    return (
+                                        <div key={point.month} className="flex items-center space-x-3">
+                                            <span className="text-xs text-gray-500 w-20 flex-shrink-0">{point.month}</span>
+                                            <div className="flex-1 flex items-center">
+                                                <div className="w-full bg-gray-100 rounded-full h-4 relative">
+                                                    <div className="absolute inset-y-0 left-1/2 w-px bg-gray-300" />
+                                                    {score >= 0 ? (
+                                                        <div
+                                                            className="absolute inset-y-0 left-1/2 bg-green-400 rounded-r-full"
+                                                            style={{ width: `${barWidth / 2}%` }}
+                                                        />
+                                                    ) : (
+                                                        <div
+                                                            className="absolute inset-y-0 bg-red-400 rounded-l-full"
+                                                            style={{ width: `${barWidth / 2}%`, right: '50%' }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <span className={`text-xs font-medium w-16 text-right ${sentimentBadgeColors[label]?.split(' ').find(c => c.startsWith('text-')) || 'text-gray-600'}`}>
+                                                {score > 0 ? '+' : ''}{score.toFixed(2)}
+                                            </span>
+                                            <span className="text-xs text-gray-400 w-12 text-right">{point.count} notes</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400">No timeline data available yet.</p>
+                        )}
+                    </div>
+                )}
+
+                {sentimentTab === 'field_reports' && (
+                    <MentionsList
+                        items={field_report_mentions}
+                        emptyText="No opponent mentions found in field reports."
+                        renderItem={(item) => (
+                            <div key={item.id} className={`p-3 rounded-lg border ${sentimentColors[item.sentiment_label] || 'border-gray-200'}`}>
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-sm font-medium text-gray-900">{item.title || 'Field Report'}</span>
+                                        {item.type && <span className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full">{item.type}</span>}
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${sentimentBadgeColors[item.sentiment_label]}`}>
+                                            {item.sentiment_label} ({item.sentiment_score > 0 ? '+' : ''}{item.sentiment_score})
+                                        </span>
+                                        <span className="text-xs text-gray-400">{item.date}</span>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 line-clamp-2">{item.excerpt}</p>
+                            </div>
+                        )}
+                    />
+                )}
+
+                {sentimentTab === 'interactions' && (
+                    <MentionsList
+                        items={voter_interaction_mentions}
+                        emptyText="No opponent mentions found in voter interactions."
+                        renderItem={(item) => (
+                            <div key={item.id} className={`p-3 rounded-lg border ${sentimentColors[item.sentiment_label] || 'border-gray-200'}`}>
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-sm font-medium text-gray-900 capitalize">{item.type || 'Interaction'}</span>
+                                        {item.outcome && <span className="px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded-full">{item.outcome}</span>}
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${sentimentBadgeColors[item.sentiment_label]}`}>
+                                            {item.sentiment_label} ({item.sentiment_score > 0 ? '+' : ''}{item.sentiment_score})
+                                        </span>
+                                        <span className="text-xs text-gray-400">{item.date}</span>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 line-clamp-2">{item.excerpt}</p>
+                            </div>
+                        )}
+                    />
+                )}
+            </div>
+        </div>
+    );
+}
+
+function MentionsList({ items, emptyText, renderItem }) {
+    if (!items || items.length === 0) {
+        return <p className="text-sm text-gray-400">{emptyText}</p>;
+    }
+
+    return (
+        <div className="space-y-2 max-h-80 overflow-y-auto">
+            {items.map(renderItem)}
+        </div>
     );
 }

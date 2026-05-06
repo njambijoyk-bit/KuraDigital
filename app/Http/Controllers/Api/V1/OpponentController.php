@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\FieldReport;
 use App\Models\Opponent;
 use App\Models\OpponentResearch;
+use App\Models\VoterInteraction;
+use App\Services\SentimentAnalysisService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -219,6 +222,13 @@ class OpponentController extends Controller
         $validated['opponent_id'] = $opponent->id;
         $validated['created_by'] = $request->user()->id;
 
+        // Auto-analyze sentiment
+        $sentiment = app(SentimentAnalysisService::class)->analyze(
+            ($validated['title'] ?? '') . ' ' . ($validated['content'] ?? '')
+        );
+        $validated['sentiment_score'] = $sentiment['score'];
+        $validated['sentiment_label'] = $sentiment['label'];
+
         $research = OpponentResearch::create($validated);
         $research->load('author:id,name');
 
@@ -255,6 +265,18 @@ class OpponentController extends Controller
 
         $research->update($validated);
 
+        // Re-analyze sentiment if title or content changed
+        if (isset($validated['title']) || isset($validated['content'])) {
+            $fresh = $research->fresh();
+            $sentiment = app(SentimentAnalysisService::class)->analyze(
+                $fresh->title . ' ' . $fresh->content
+            );
+            $fresh->update([
+                'sentiment_score' => $sentiment['score'],
+                'sentiment_label' => $sentiment['label'],
+            ]);
+        }
+
         return response()->json([
             'message' => 'Research note updated.',
             'research' => $research->fresh()->load('author:id,name'),
@@ -277,5 +299,159 @@ class OpponentController extends Controller
         $research->delete();
 
         return response()->json(['message' => 'Research note deleted.']);
+    }
+
+    // --- Sentiment Analysis ---
+
+    public function researchReanalyze(Request $request, Campaign $campaign, Opponent $opponent, OpponentResearch $research): JsonResponse
+    {
+        $this->authorize('editResearch', [Opponent::class, $campaign]);
+
+        if ($opponent->campaign_id !== $campaign->id || $research->opponent_id !== $opponent->id) {
+            return response()->json(['message' => 'Research not found.'], 404);
+        }
+
+        $sentiment = app(SentimentAnalysisService::class)->analyze(
+            $research->title . ' ' . $research->content
+        );
+
+        $research->update([
+            'sentiment_score' => $sentiment['score'],
+            'sentiment_label' => $sentiment['label'],
+        ]);
+
+        return response()->json([
+            'message' => 'Sentiment re-analyzed.',
+            'research' => $research->fresh()->load('author:id,name'),
+        ]);
+    }
+
+    public function sentimentSummary(Request $request, Campaign $campaign, Opponent $opponent): JsonResponse
+    {
+        $this->authorize('viewResearch', [Opponent::class, $campaign]);
+
+        if ($opponent->campaign_id !== $campaign->id) {
+            return response()->json(['message' => 'Opponent not found.'], 404);
+        }
+
+        $membership = $request->user()->membershipFor($campaign);
+        if ($membership && !$membership->hasGeographicAccessTo($opponent)) {
+            return response()->json(['message' => 'You do not have access to this geographic area.'], 403);
+        }
+
+        // Research note sentiment aggregation
+        $researchSentiment = $opponent->research()
+            ->whereNotNull('sentiment_label')
+            ->selectRaw('sentiment_label, COUNT(*) as count, AVG(sentiment_score) as avg_score')
+            ->groupBy('sentiment_label')
+            ->get()
+            ->keyBy('sentiment_label');
+
+        // Research sentiment over time (monthly)
+        $researchTimeline = $opponent->research()
+            ->whereNotNull('sentiment_score')
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, AVG(sentiment_score) as avg_score, COUNT(*) as count")
+            ->groupByRaw("DATE_FORMAT(created_at, '%Y-%m')")
+            ->orderBy('month')
+            ->get();
+
+        // Scan field reports for mentions
+        $service = app(SentimentAnalysisService::class);
+        $opponentData = [['id' => $opponent->id, 'name' => $opponent->name]];
+
+        $fieldReportMentions = [];
+        FieldReport::where('campaign_id', $campaign->id)
+            ->whereNotNull('body')
+            ->where('body', '!=', '')
+            ->orderByDesc('created_at')
+            ->limit(500)
+            ->chunk(100, function ($reports) use ($service, $opponentData, &$fieldReportMentions) {
+                foreach ($reports as $report) {
+                    $mentions = $service->scanForOpponentMentions($report->body, $opponentData);
+                    if (!empty($mentions)) {
+                        $fieldReportMentions[] = [
+                            'id' => $report->id,
+                            'title' => $report->title,
+                            'type' => $report->type,
+                            'date' => $report->created_at->toDateString(),
+                            'sentiment_score' => $mentions[0]['score'],
+                            'sentiment_label' => $mentions[0]['label'],
+                            'excerpt' => mb_substr($report->body, 0, 200),
+                        ];
+                    }
+                }
+            });
+
+        // Scan voter interactions for mentions
+        $voterInteractionMentions = [];
+        VoterInteraction::where('campaign_id', $campaign->id)
+            ->whereNotNull('notes')
+            ->where('notes', '!=', '')
+            ->orderByDesc('created_at')
+            ->limit(500)
+            ->chunk(100, function ($interactions) use ($service, $opponentData, &$voterInteractionMentions) {
+                foreach ($interactions as $interaction) {
+                    $mentions = $service->scanForOpponentMentions($interaction->notes, $opponentData);
+                    if (!empty($mentions)) {
+                        $voterInteractionMentions[] = [
+                            'id' => $interaction->id,
+                            'type' => $interaction->interaction_type,
+                            'outcome' => $interaction->outcome,
+                            'date' => $interaction->created_at->toDateString(),
+                            'sentiment_score' => $mentions[0]['score'],
+                            'sentiment_label' => $mentions[0]['label'],
+                            'excerpt' => mb_substr($interaction->notes, 0, 200),
+                        ];
+                    }
+                }
+            });
+
+        // Compute overall aggregates
+        $allScores = collect($fieldReportMentions)->pluck('sentiment_score')
+            ->merge(collect($voterInteractionMentions)->pluck('sentiment_score'))
+            ->merge($opponent->research()->whereNotNull('sentiment_score')->pluck('sentiment_score'));
+
+        $overallAvg = $allScores->isNotEmpty() ? round($allScores->avg(), 2) : 0;
+        $overallLabel = $overallAvg >= 0.3 ? 'positive' : ($overallAvg <= -0.3 ? 'negative' : 'neutral');
+
+        return response()->json([
+            'overall' => [
+                'avg_score' => $overallAvg,
+                'label' => $overallLabel,
+                'total_sources' => $allScores->count(),
+            ],
+            'research_breakdown' => $researchSentiment,
+            'research_timeline' => $researchTimeline,
+            'field_report_mentions' => $fieldReportMentions,
+            'voter_interaction_mentions' => $voterInteractionMentions,
+        ]);
+    }
+
+    public function bulkReanalyze(Request $request, Campaign $campaign, Opponent $opponent): JsonResponse
+    {
+        $this->authorize('editResearch', [Opponent::class, $campaign]);
+
+        if ($opponent->campaign_id !== $campaign->id) {
+            return response()->json(['message' => 'Opponent not found.'], 404);
+        }
+
+        $service = app(SentimentAnalysisService::class);
+        $count = 0;
+
+        $opponent->research()->chunk(50, function ($notes) use ($service, &$count) {
+            foreach ($notes as $note) {
+                $sentiment = $service->analyze($note->title . ' ' . $note->content);
+                $note->update([
+                    'sentiment_score' => $sentiment['score'],
+                    'sentiment_label' => $sentiment['label'],
+                ]);
+                $count++;
+            }
+        });
+
+        return response()->json([
+            'message' => "Re-analyzed sentiment for {$count} research notes.",
+            'count' => $count,
+        ]);
     }
 }

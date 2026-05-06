@@ -224,6 +224,11 @@ Route::prefix('v1')->group(function () {
             Route::post('/opponents/{opponent}/research', [OpponentController::class, 'researchStore']);
             Route::put('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchUpdate']);
             Route::delete('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchDestroy']);
+            Route::post('/opponents/{opponent}/research/{research}/reanalyze', [OpponentController::class, 'researchReanalyze']);
+
+            // Opponent sentiment analysis
+            Route::get('/opponents/{opponent}/sentiment', [OpponentController::class, 'sentimentSummary']);
+            Route::post('/opponents/{opponent}/sentiment/reanalyze-all', [OpponentController::class, 'bulkReanalyze']);
 
             // --- Phase 1D: Field Operations ---
 
