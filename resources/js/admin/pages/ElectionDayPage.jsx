@@ -849,6 +849,7 @@ function FormsTab({ campaignId }) {
     const [file, setFile] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const [ocrResult, setOcrResult] = useState(null);
     const [stations, setStations] = useState([]);
     const { can } = useCampaignPermissions();
 
@@ -880,13 +881,17 @@ function FormsTab({ campaignId }) {
         if (!file || !form.polling_station_id) return;
         setSubmitting(true);
         setError(null);
+        setOcrResult(null);
         try {
             const fd = new FormData();
             fd.append('image', file);
             fd.append('polling_station_id', form.polling_station_id);
             fd.append('form_type', form.form_type);
             if (form.notes) fd.append('notes', form.notes);
-            await api.post(`/campaigns/${campaignId}/election-day/forms`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            const { data: resp } = await api.post(`/campaigns/${campaignId}/election-day/forms`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            if (resp.ocr) {
+                setOcrResult(resp.ocr);
+            }
             setShowUpload(false);
             setFile(null);
             setForm({ polling_station_id: '', form_type: '34A', notes: '' });
@@ -948,6 +953,24 @@ function FormsTab({ campaignId }) {
 
     return (
         <div className="space-y-4">
+            {ocrResult && (
+                <div className={`rounded-lg p-4 flex items-start gap-3 ${ocrResult.success ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+                    <ChartBarIcon className={`h-5 w-5 flex-shrink-0 mt-0.5 ${ocrResult.success ? 'text-green-600' : 'text-amber-600'}`} />
+                    <div>
+                        <p className={`text-sm font-semibold ${ocrResult.success ? 'text-green-800' : 'text-amber-800'}`}>
+                            {ocrResult.success
+                                ? ocrResult.auto_parsed ? 'OCR: Results auto-extracted from form image' : 'OCR: Text extracted (manual review recommended)'
+                                : `OCR: ${ocrResult.error || 'Could not process image'}`
+                            }
+                        </p>
+                        {ocrResult.success && ocrResult.auto_parsed && (
+                            <p className="text-sm text-green-700 mt-1">Candidate names and votes were automatically parsed. Verify accuracy before confirming.</p>
+                        )}
+                        <button onClick={() => setOcrResult(null)} className="mt-2 text-xs underline opacity-70 hover:opacity-100">Dismiss</button>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">

@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\MessagingController;
 use App\Http\Controllers\Api\V1\FinanceController;
 use App\Http\Controllers\Api\V1\MpesaWebhookController;
 use App\Http\Controllers\Api\V1\ElectionDayController;
+use App\Http\Controllers\Api\V1\UssdController;
 use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\MapController;
@@ -432,4 +433,15 @@ Route::prefix('v1/webhooks/mpesa')->group(function () {
     Route::post('/stk-callback', [MpesaWebhookController::class, 'stkCallback']);
     Route::post('/c2b-validation', [MpesaWebhookController::class, 'c2bValidation']);
     Route::post('/c2b-confirmation', [MpesaWebhookController::class, 'c2bConfirmation']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Africa's Talking USSD Webhook (public, no auth)
+|--------------------------------------------------------------------------
+| Configure this URL in your Africa's Talking dashboard:
+| POST https://yourdomain.com/api/v1/webhooks/ussd/callback
+*/
+Route::prefix('v1/webhooks/ussd')->group(function () {
+    Route::post('/callback', [UssdController::class, 'callback']);
 });
