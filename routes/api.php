@@ -365,6 +365,14 @@ Route::prefix('v1')->group(function () {
             Route::put('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsUpdate']);
             Route::delete('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsDestroy']);
 
+            // Summary & agent deployment
+            Route::get('/election-day/summary', [ElectionDayController::class, 'summary']);
+            Route::get('/election-day/agent-deployment', [ElectionDayController::class, 'agentDeployment']);
+
+            // CSV exports (defined before wildcard routes to avoid conflicts)
+            Route::get('/election-day/tallies/export/csv', [ElectionDayController::class, 'talliesExportCsv']);
+            Route::get('/election-day/incidents/export/csv', [ElectionDayController::class, 'incidentsExportCsv']);
+
             // Tally results
             Route::get('/election-day/tallies', [ElectionDayController::class, 'talliesIndex']);
             Route::post('/election-day/tallies', [ElectionDayController::class, 'talliesStore']);
@@ -380,7 +388,7 @@ Route::prefix('v1')->group(function () {
 
             // Incidents
             Route::get('/election-day/incidents', [ElectionDayController::class, 'incidentsIndex']);
-            Route::post('/election-day/incidents', [ElectionDayController::class, 'incidentsStore']);
+            Route::post('/election-day/incidents', [ElectionDayController::class, 'incidentsStoreWithAlert']);
             Route::get('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsShow']);
             Route::put('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsUpdate']);
             Route::post('/election-day/incidents/{incident}/resolve', [ElectionDayController::class, 'incidentsResolve']);

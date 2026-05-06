@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\FieldAgent;
 use App\Models\Incident;
 use App\Models\PollingStation;
 use App\Models\ResultForm;
 use App\Models\TallyResult;
+use App\Services\AfricasTalkingSmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ElectionDayController extends Controller
 {
@@ -155,12 +159,19 @@ class ElectionDayController extends Controller
             ->where('id', $validated['polling_station_id'])
             ->firstOrFail();
 
+        $warnings = $this->detectTallyAnomalies($validated, $station, $campaign);
+
         $validated['campaign_id'] = $campaign->id;
         $validated['submitted_by'] = $request->user()->id;
 
         $result = TallyResult::create($validated);
 
-        return response()->json($result->load(['pollingStation:id,name,code', 'submitter:id,name']), 201);
+        $response = $result->load(['pollingStation:id,name,code', 'submitter:id,name'])->toArray();
+        if (!empty($warnings)) {
+            $response['warnings'] = $warnings;
+        }
+
+        return response()->json($response, 201);
     }
 
     public function talliesShow(Request $request, Campaign $campaign, TallyResult $tallyResult): JsonResponse
@@ -646,5 +657,359 @@ class ElectionDayController extends Controller
         }
 
         return $discrepancies;
+    }
+
+    // =====================================================================
+    // Anomaly Detection
+    // =====================================================================
+
+    private function detectTallyAnomalies(array $tally, PollingStation $station, Campaign $campaign): array
+    {
+        $warnings = [];
+
+        if ($station->registered_voters && $station->registered_voters > 0) {
+            if ($tally['votes'] > $station->registered_voters) {
+                $warnings[] = [
+                    'type' => 'votes_exceed_registered',
+                    'message' => "Votes ({$tally['votes']}) exceed registered voters ({$station->registered_voters}) at {$station->name}.",
+                ];
+            }
+            if (!empty($tally['total_votes_cast']) && $tally['total_votes_cast'] > $station->registered_voters) {
+                $warnings[] = [
+                    'type' => 'turnout_exceeds_100',
+                    'message' => "Total votes cast ({$tally['total_votes_cast']}) exceed registered voters ({$station->registered_voters}).",
+                ];
+            }
+        }
+
+        $existingTally = TallyResult::where('campaign_id', $campaign->id)
+            ->where('polling_station_id', $station->id)
+            ->where('candidate_name', $tally['candidate_name'])
+            ->first();
+
+        if ($existingTally) {
+            $warnings[] = [
+                'type' => 'duplicate_candidate',
+                'message' => "A tally for '{$tally['candidate_name']}' at {$station->name} already exists (ID: {$existingTally->id}).",
+            ];
+        }
+
+        $neighborStations = PollingStation::where('campaign_id', $campaign->id)
+            ->where('id', '!=', $station->id)
+            ->where('ward', $station->ward)
+            ->pluck('id');
+
+        if ($neighborStations->isNotEmpty() && $station->registered_voters > 0) {
+            $wardAvgTurnout = TallyResult::whereIn('polling_station_id', $neighborStations)
+                ->avg('total_votes_cast');
+
+            if ($wardAvgTurnout && $wardAvgTurnout > 0 && !empty($tally['total_votes_cast'])) {
+                $ratio = $tally['total_votes_cast'] / $wardAvgTurnout;
+                if ($ratio > 2.0) {
+                    $warnings[] = [
+                        'type' => 'unusual_turnout_vs_ward',
+                        'message' => "Turnout is {$ratio}x the ward average — significantly higher than neighboring stations.",
+                    ];
+                }
+            }
+        }
+
+        return $warnings;
+    }
+
+    // =====================================================================
+    // Election Day Summary / Readiness
+    // =====================================================================
+
+    public function summary(Request $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('viewAny', [TallyResult::class, $campaign]);
+
+        $stations = $campaign->pollingStations()
+            ->withCount(['tallyResults', 'incidents'])
+            ->get();
+
+        $totalStations = $stations->count();
+        $reportedStations = $stations->where('tally_results_count', '>', 0)->count();
+        $stationsWithIncidents = $stations->where('incidents_count', '>', 0)->count();
+
+        $stationsByStatus = $stations->groupBy('status')->map->count();
+
+        $tallies = $campaign->tallyResults()->get();
+        $totalVotesCast = $tallies->groupBy('polling_station_id')
+            ->map(fn ($g) => $g->max('total_votes_cast'))
+            ->sum();
+        $totalRegistered = $stations->sum('registered_voters');
+
+        $verifiedTallies = $tallies->where('status', 'verified')->count();
+        $provisionalTallies = $tallies->where('status', 'provisional')->count();
+        $disputedTallies = $tallies->where('status', 'disputed')->count();
+
+        $unresolved = $campaign->incidents()->where('status', '!=', 'resolved')->count();
+        $criticalIncidents = $campaign->incidents()->where('severity', 'critical')->where('status', '!=', 'resolved')->count();
+
+        $agents = $campaign->fieldAgents()->get();
+        $totalAgents = $agents->count();
+        $activeAgents = $agents->where('status', 'active')->count();
+
+        $stationsWithoutAgents = $stations->whereNull('assigned_agent_id')->count();
+
+        $turnoutByWard = $stations->groupBy('ward')->map(function ($wardStations) use ($tallies) {
+            $registered = $wardStations->sum('registered_voters');
+            $stationIds = $wardStations->pluck('id');
+            $cast = $tallies->whereIn('polling_station_id', $stationIds)
+                ->groupBy('polling_station_id')
+                ->map(fn ($g) => $g->max('total_votes_cast'))
+                ->sum();
+            return [
+                'stations' => $wardStations->count(),
+                'registered' => $registered,
+                'votes_cast' => $cast,
+                'turnout' => $registered > 0 ? round(($cast / $registered) * 100, 1) : 0,
+                'reported' => $wardStations->where('tally_results_count', '>', 0)->count(),
+            ];
+        })->sortByDesc('turnout')->values();
+
+        return response()->json([
+            'reporting' => [
+                'total_stations' => $totalStations,
+                'reported' => $reportedStations,
+                'unreported' => $totalStations - $reportedStations,
+                'reporting_percentage' => $totalStations > 0 ? round(($reportedStations / $totalStations) * 100, 1) : 0,
+            ],
+            'turnout' => [
+                'total_registered' => $totalRegistered,
+                'total_votes_cast' => $totalVotesCast,
+                'turnout_percentage' => $totalRegistered > 0 ? round(($totalVotesCast / $totalRegistered) * 100, 1) : 0,
+            ],
+            'tallies' => [
+                'verified' => $verifiedTallies,
+                'provisional' => $provisionalTallies,
+                'disputed' => $disputedTallies,
+            ],
+            'stations_by_status' => $stationsByStatus,
+            'incidents' => [
+                'unresolved' => $unresolved,
+                'critical' => $criticalIncidents,
+                'stations_with_incidents' => $stationsWithIncidents,
+            ],
+            'agents' => [
+                'total' => $totalAgents,
+                'active' => $activeAgents,
+                'stations_without_agent' => $stationsWithoutAgents,
+            ],
+            'turnout_by_ward' => $turnoutByWard,
+        ]);
+    }
+
+    // =====================================================================
+    // Agent Deployment Status
+    // =====================================================================
+
+    public function agentDeployment(Request $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('create', [PollingStation::class, $campaign]);
+
+        $agents = $campaign->fieldAgents()
+            ->with(['user:id,name,email', 'schedules' => function ($q) {
+                $q->whereDate('shift_date', now()->toDateString());
+            }])
+            ->get();
+
+        $stations = $campaign->pollingStations()
+            ->select('id', 'name', 'code', 'ward', 'assigned_agent_id', 'status')
+            ->get();
+
+        $checkedInToday = $campaign->checkIns()
+            ->whereDate('created_at', now()->toDateString())
+            ->pluck('user_id')
+            ->unique();
+
+        $deployed = [];
+        $undeployed = [];
+
+        foreach ($agents as $agent) {
+            $agentData = [
+                'id' => $agent->id,
+                'name' => $agent->user?->name ?? 'Unknown',
+                'agent_code' => $agent->agent_code,
+                'phone' => $agent->phone,
+                'ward' => $agent->ward,
+                'status' => $agent->status,
+                'checked_in_today' => $checkedInToday->contains($agent->user_id),
+                'scheduled_today' => $agent->schedules->isNotEmpty(),
+                'assigned_station' => $stations->where('assigned_agent_id', $agent->user_id)->first()?->name,
+            ];
+
+            if ($checkedInToday->contains($agent->user_id)) {
+                $deployed[] = $agentData;
+            } else {
+                $undeployed[] = $agentData;
+            }
+        }
+
+        $unmanned = $stations->whereNull('assigned_agent_id')
+            ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code, 'ward' => $s->ward])
+            ->values();
+
+        return response()->json([
+            'overview' => [
+                'total_agents' => $agents->count(),
+                'checked_in' => count($deployed),
+                'not_checked_in' => count($undeployed),
+                'unmanned_stations' => $unmanned->count(),
+            ],
+            'deployed' => $deployed,
+            'undeployed' => $undeployed,
+            'unmanned_stations' => $unmanned,
+        ]);
+    }
+
+    // =====================================================================
+    // SMS Alerts for Critical Incidents
+    // =====================================================================
+
+    public function incidentsStoreWithAlert(Request $request, Campaign $campaign): JsonResponse
+    {
+        $response = $this->incidentsStore($request, $campaign);
+
+        if ($response->getStatusCode() === 201) {
+            $incident = json_decode($response->getContent(), true);
+            $severity = $incident['severity'] ?? 'low';
+
+            if (in_array($severity, ['critical', 'high'])) {
+                $this->sendIncidentSmsAlert($campaign, $incident);
+            }
+        }
+
+        return $response;
+    }
+
+    private function sendIncidentSmsAlert(Campaign $campaign, array $incident): void
+    {
+        $sms = app(AfricasTalkingSmsService::class);
+        if (!$sms->isConfigured()) {
+            return;
+        }
+
+        $stationName = $incident['polling_station']['name'] ?? ($incident['ward'] ?? 'Unknown location');
+        $message = "[KURA ALERT] {$incident['severity']} incident at {$stationName}: {$incident['title']}. Reported by {$incident['reporter']['name']}.";
+
+        $coordinators = $campaign->members()
+            ->where('is_active', true)
+            ->whereIn('role', ['owner', 'admin', 'coordinator'])
+            ->with('user:id,phone')
+            ->get();
+
+        foreach ($coordinators as $member) {
+            $phone = $member->user?->phone;
+            if ($phone) {
+                try {
+                    $sms->send($phone, $message);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to send incident SMS alert', [
+                        'phone' => $phone,
+                        'incident_id' => $incident['id'] ?? null,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+    }
+
+    // =====================================================================
+    // CSV Export
+    // =====================================================================
+
+    public function talliesExportCsv(Request $request, Campaign $campaign): StreamedResponse
+    {
+        $this->authorize('viewAny', [TallyResult::class, $campaign]);
+
+        $tallies = $campaign->tallyResults()
+            ->with(['pollingStation:id,name,code,ward,constituency,county,registered_voters', 'submitter:id,name', 'verifier:id,name'])
+            ->orderBy('polling_station_id')
+            ->orderBy('candidate_name')
+            ->get();
+
+        $filename = 'tallies_' . $campaign->id . '_' . now()->format('Y-m-d_His') . '.csv';
+
+        return response()->streamDownload(function () use ($tallies) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Station', 'Station Code', 'Ward', 'Constituency', 'County',
+                'Registered Voters', 'Candidate', 'Party', 'Votes',
+                'Rejected Votes', 'Total Cast', 'Status',
+                'Submitted By', 'Verified By', 'Created At',
+            ]);
+
+            foreach ($tallies as $tally) {
+                fputcsv($handle, [
+                    $tally->pollingStation?->name ?? '',
+                    $tally->pollingStation?->code ?? '',
+                    $tally->pollingStation?->ward ?? '',
+                    $tally->pollingStation?->constituency ?? '',
+                    $tally->pollingStation?->county ?? '',
+                    $tally->pollingStation?->registered_voters ?? '',
+                    $tally->candidate_name,
+                    $tally->party ?? '',
+                    $tally->votes,
+                    $tally->rejected_votes ?? '',
+                    $tally->total_votes_cast ?? '',
+                    $tally->status,
+                    $tally->submitter?->name ?? '',
+                    $tally->verifier?->name ?? '',
+                    $tally->created_at?->toDateTimeString(),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    public function incidentsExportCsv(Request $request, Campaign $campaign): StreamedResponse
+    {
+        $this->authorize('viewAny', [Incident::class, $campaign]);
+
+        $incidents = $campaign->incidents()
+            ->with(['pollingStation:id,name,code', 'reporter:id,name', 'resolver:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $filename = 'incidents_' . $campaign->id . '_' . now()->format('Y-m-d_His') . '.csv';
+
+        return response()->streamDownload(function () use ($incidents) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'ID', 'Title', 'Category', 'Severity', 'Status',
+                'Station', 'Ward', 'Constituency', 'County',
+                'Reported By', 'Resolved By', 'Created At', 'Resolved At',
+            ]);
+
+            foreach ($incidents as $incident) {
+                fputcsv($handle, [
+                    $incident->id,
+                    $incident->title,
+                    $incident->category,
+                    $incident->severity,
+                    $incident->status,
+                    $incident->pollingStation?->name ?? '',
+                    $incident->ward ?? '',
+                    $incident->constituency ?? '',
+                    $incident->county ?? '',
+                    $incident->reporter?->name ?? '',
+                    $incident->resolver?->name ?? '',
+                    $incident->created_at?->toDateTimeString(),
+                    $incident->resolved_at?->toDateTimeString() ?? '',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }
