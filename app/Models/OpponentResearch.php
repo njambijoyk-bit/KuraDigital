@@ -21,10 +21,13 @@ class OpponentResearch extends Model
         'clearance',
         'source',
         'date_observed',
+        'sentiment_score',
+        'sentiment_label',
     ];
 
     protected $casts = [
         'date_observed' => 'date',
+        'sentiment_score' => 'decimal:2',
     ];
 
     public function opponent(): BelongsTo
