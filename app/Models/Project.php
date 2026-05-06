@@ -12,7 +12,8 @@ class Project extends Model
     use Auditable, HasFactory;
 
     protected $fillable = [
-        'site_id', 'title', 'description', 'category', 'status', 'image_url', 'impact', 'sort_order',
+        'site_id', 'title', 'title_sw', 'description', 'description_sw',
+        'category', 'status', 'image_url', 'impact', 'sort_order',
         'ward', 'constituency', 'county',
     ];
 

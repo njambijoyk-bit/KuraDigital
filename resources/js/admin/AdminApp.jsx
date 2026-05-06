@@ -16,6 +16,7 @@ const NewsPage = lazy(() => import('./pages/NewsPage'));
 const GalleryPage = lazy(() => import('./pages/GalleryPage'));
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
 const VotersPage = lazy(() => import('./pages/VotersPage'));
+const CanvassingPage = lazy(() => import('./pages/CanvassingPage'));
 const VolunteersPage = lazy(() => import('./pages/VolunteersPage'));
 const ContactsPage = lazy(() => import('./pages/ContactsPage'));
 const MediaPage = lazy(() => import('./pages/MediaPage'));
@@ -25,6 +26,12 @@ const FieldOpsPage = lazy(() => import('./pages/FieldOpsPage'));
 const FieldReportsPage = lazy(() => import('./pages/FieldReportsPage'));
 const CaptureReportPage = lazy(() => import('./pages/CaptureReportPage'));
 const SurveysPage = lazy(() => import('./pages/SurveysPage'));
+const StrategyPage = lazy(() => import('./pages/StrategyPage'));
+const MessagingPage = lazy(() => import('./pages/MessagingPage'));
+const FinancePage = lazy(() => import('./pages/FinancePage'));
+const ElectionDayPage = lazy(() => import('./pages/ElectionDayPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 
 function Loading() {
     return (
@@ -69,6 +76,7 @@ export default function AdminApp() {
                     <Route path="gallery" element={<RequirePermission permission="gallery.view"><GalleryPage /></RequirePermission>} />
                     <Route path="projects" element={<RequirePermission permission="projects.view"><ProjectsPage /></RequirePermission>} />
                     <Route path="voters" element={<RequirePermission permission="voters.view"><VotersPage /></RequirePermission>} />
+                    <Route path="canvassing" element={<RequirePermission permission="field.view"><CanvassingPage /></RequirePermission>} />
                     <Route path="volunteers" element={<RequirePermission permission="volunteers.view"><VolunteersPage /></RequirePermission>} />
                     <Route path="contacts" element={<RequirePermission permission="contacts.view"><ContactsPage /></RequirePermission>} />
                     <Route path="opponents" element={<RequirePermission permission="opponents.view"><OpponentsPage /></RequirePermission>} />
@@ -76,6 +84,12 @@ export default function AdminApp() {
                     <Route path="field-reports" element={<RequirePermission permission="field.view-reports"><FieldReportsPage /></RequirePermission>} />
                     <Route path="capture-report" element={<RequirePermission permission="field.create-reports"><CaptureReportPage /></RequirePermission>} />
                     <Route path="surveys" element={<RequirePermission permission="field.view"><SurveysPage /></RequirePermission>} />
+                    <Route path="strategy" element={<RequirePermission permission="strategy.view"><StrategyPage /></RequirePermission>} />
+                    <Route path="messaging" element={<RequirePermission permission="messaging.view"><MessagingPage /></RequirePermission>} />
+                    <Route path="finance" element={<RequirePermission permission="finance.view"><FinancePage /></RequirePermission>} />
+                    <Route path="election-day" element={<RequirePermission permission="eday.view"><ElectionDayPage /></RequirePermission>} />
+                    <Route path="reports" element={<RequirePermission permission="reports.view"><ReportsPage /></RequirePermission>} />
+                    <Route path="analytics" element={<RequirePermission permission="analytics.view"><AnalyticsPage /></RequirePermission>} />
                     <Route path="media" element={<RequirePermission permission="media.view"><MediaPage /></RequirePermission>} />
                     <Route path="audit" element={<RequirePermission permission="audit.view"><AuditLogPage /></RequirePermission>} />
                 </Route>

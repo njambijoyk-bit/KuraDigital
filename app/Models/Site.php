@@ -20,12 +20,15 @@ class Site extends Model
         'pillars', 'milestones',
         'phone', 'email', 'office_address',
         'facebook_url', 'twitter_url', 'instagram_url', 'tiktok_url', 'youtube_url',
-        'donation_info', 'is_active',
+        'donation_info', 'donation_goal', 'donations_enabled', 'mpesa_paybill',
+        'is_active',
     ];
 
     protected $casts = [
         'pillars' => 'array',
         'milestones' => 'array',
+        'donation_goal' => 'decimal:2',
+        'donations_enabled' => 'boolean',
         'is_active' => 'boolean',
     ];
 
@@ -97,5 +100,19 @@ class Site extends Model
     public function contactMessages(): HasMany
     {
         return $this->hasMany(ContactMessage::class);
+    }
+
+    public function newsletterSubscribers(): HasMany
+    {
+        return $this->hasMany(NewsletterSubscriber::class);
+    }
+
+    public function donations(): HasMany
+    {
+        $campaign = Campaign::where('site_id', $this->id)->first();
+        if (!$campaign) {
+            return $this->hasMany(Donation::class, 'campaign_id', 'id')->whereRaw('1 = 0');
+        }
+        return $campaign->donations();
     }
 }

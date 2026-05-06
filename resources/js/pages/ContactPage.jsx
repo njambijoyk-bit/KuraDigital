@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 export default function ContactPage() {
@@ -25,6 +26,11 @@ export default function ContactPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Contact | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`Contact ${site?.candidate_name || 'the campaign'} team.`} />
+            </Helmet>
+
             <section className="bg-dark-900 text-white py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">Contact Us</h1>

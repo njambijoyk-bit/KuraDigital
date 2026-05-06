@@ -1,14 +1,21 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useParams } from 'react-router-dom';
 import Layout from './components/layout/Layout';
+import PlatformHomePage from './pages/PlatformHomePage';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ManifestoPage from './pages/ManifestoPage';
 import EventsPage from './pages/EventsPage';
+import EventDetailPage from './pages/EventDetailPage';
 import NewsPage from './pages/NewsPage';
+import NewsDetailPage from './pages/NewsDetailPage';
 import GalleryPage from './pages/GalleryPage';
 import ContactPage from './pages/ContactPage';
 import VolunteerPage from './pages/VolunteerPage';
+import DonatePage from './pages/DonatePage';
+import ResultsPage from './pages/ResultsPage';
+import SurveysPublicPage from './pages/SurveysPublicPage';
+import SurveyFillPage from './pages/SurveyFillPage';
 import ProjectsPage from './pages/ProjectsPage';
 import RegisterPage from './pages/RegisterPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -52,10 +59,16 @@ function SiteWrapper() {
                 <Route path="about" element={<AboutPage />} />
                 <Route path="manifesto" element={<ManifestoPage />} />
                 <Route path="events" element={<EventsPage />} />
+                <Route path="events/:eventId" element={<EventDetailPage />} />
                 <Route path="news" element={<NewsPage />} />
+                <Route path="news/:articleId" element={<NewsDetailPage />} />
                 <Route path="gallery" element={<GalleryPage />} />
                 <Route path="contact" element={<ContactPage />} />
                 <Route path="volunteer" element={<VolunteerPage />} />
+                <Route path="donate" element={<DonatePage />} />
+                <Route path="results" element={<ResultsPage />} />
+                <Route path="surveys" element={<SurveysPublicPage />} />
+                <Route path="surveys/:surveyId" element={<SurveyFillPage />} />
                 <Route path="projects" element={<ProjectsPage />} />
                 <Route path="register" element={<RegisterPage />} />
                 <Route path="*" element={<NotFoundPage />} />
@@ -67,6 +80,7 @@ function SiteWrapper() {
 export default function App() {
     return (
         <Routes>
+            <Route path="/" element={<PlatformHomePage />} />
             <Route path="/admin/*" element={<AdminApp />} />
             <Route path="/:slug/*" element={<SiteWrapper />} />
             <Route path="*" element={<NotFoundPage />} />

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\OpponentController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\SiteSettingsController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\FieldOperationsController;
 use App\Http\Controllers\Api\V1\VoterController;
 use App\Http\Controllers\Api\V1\VolunteerController;
 use App\Http\Controllers\Api\V1\FieldAgentController;
@@ -21,6 +22,13 @@ use App\Http\Controllers\Api\V1\SurveyController;
 use App\Http\Controllers\Api\V1\CheckInController;
 use App\Http\Controllers\Api\V1\FieldReportController;
 use App\Http\Controllers\Api\V1\AgentScheduleController;
+use App\Http\Controllers\Api\V1\StrategyController;
+use App\Http\Controllers\Api\V1\MessagingController;
+use App\Http\Controllers\Api\V1\FinanceController;
+use App\Http\Controllers\Api\V1\MpesaWebhookController;
+use App\Http\Controllers\Api\V1\ElectionDayController;
+use App\Http\Controllers\Api\V1\ReportsController;
+use App\Http\Controllers\Api\V1\AnalyticsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,15 +36,30 @@ use Illuminate\Support\Facades\Route;
 | Public Site API (existing)
 |--------------------------------------------------------------------------
 */
+Route::get('/sites', [SiteController::class, 'index']);
 Route::get('/sites/{slug}', [SiteController::class, 'show']);
 Route::get('/sites/{siteId}/manifesto', [SiteController::class, 'manifesto']);
 Route::get('/sites/{siteId}/events', [SiteController::class, 'events']);
+Route::get('/sites/{siteId}/events/{eventId}', [SiteController::class, 'eventShow']);
+Route::post('/sites/{siteId}/events/{eventId}/rsvp', [SiteController::class, 'eventRsvp']);
 Route::get('/sites/{siteId}/news', [SiteController::class, 'news']);
+Route::get('/sites/{siteId}/news/{articleId}', [SiteController::class, 'newsShow']);
 Route::get('/sites/{siteId}/gallery', [SiteController::class, 'gallery']);
 Route::get('/sites/{siteId}/projects', [SiteController::class, 'projects']);
+Route::get('/sites/{siteId}/news/{articleId}', [SiteController::class, 'showNewsArticle']);
+Route::get('/sites/{siteId}/events/{eventId}', [SiteController::class, 'showEvent']);
+Route::post('/sites/{siteId}/events/{eventId}/rsvp', [SiteController::class, 'rsvpEvent']);
+Route::post('/sites/{siteId}/newsletter', [SiteController::class, 'subscribeNewsletter']);
 Route::post('/sites/{siteId}/contact', [SiteController::class, 'storeContact']);
 Route::post('/sites/{siteId}/volunteers', [SiteController::class, 'storeVolunteer']);
+Route::post('/sites/{siteId}/subscribe', [SiteController::class, 'subscribe']);
 Route::post('/sites/{siteId}/register-supporter', [SiteController::class, 'registerSupporter']);
+Route::get('/sites/{siteId}/donations/stats', [SiteController::class, 'donationStats']);
+Route::post('/sites/{siteId}/donate', [SiteController::class, 'donate']);
+Route::get('/sites/{siteId}/election-results', [SiteController::class, 'electionResults']);
+Route::get('/sites/{siteId}/surveys', [SiteController::class, 'publicSurveys']);
+Route::get('/sites/{siteId}/surveys/{surveyId}', [SiteController::class, 'publicSurveyShow']);
+Route::post('/sites/{siteId}/surveys/{surveyId}/submit', [SiteController::class, 'publicSurveySubmit']);
 
 /*
 |--------------------------------------------------------------------------
@@ -169,6 +192,25 @@ Route::prefix('v1')->group(function () {
             Route::put('/voters/{voter}', [VoterController::class, 'update']);
             Route::delete('/voters/{voter}', [VoterController::class, 'destroy']);
 
+            // Field Operations — Canvassing Assignments
+            Route::get('/field/assignments', [FieldOperationsController::class, 'assignments']);
+            Route::post('/field/assignments', [FieldOperationsController::class, 'storeAssignment']);
+            Route::get('/field/assignments/{assignment}', [FieldOperationsController::class, 'showAssignment']);
+            Route::put('/field/assignments/{assignment}', [FieldOperationsController::class, 'updateAssignment']);
+            Route::delete('/field/assignments/{assignment}', [FieldOperationsController::class, 'destroyAssignment']);
+
+            // Field Operations — Voter Interactions
+            Route::get('/field/interactions', [FieldOperationsController::class, 'interactions']);
+            Route::post('/field/interactions', [FieldOperationsController::class, 'storeInteraction']);
+            Route::get('/field/interactions/{interaction}', [FieldOperationsController::class, 'showInteraction']);
+
+            // Field Operations — Agent Check-ins
+            Route::get('/field/check-ins', [FieldOperationsController::class, 'checkIns']);
+            Route::post('/field/check-ins', [FieldOperationsController::class, 'storeCheckIn']);
+
+            // Field Operations — Stats
+            Route::get('/field/stats', [FieldOperationsController::class, 'stats']);
+
             // Opponents
             Route::get('/opponents', [OpponentController::class, 'index']);
             Route::post('/opponents', [OpponentController::class, 'store']);
@@ -212,6 +254,9 @@ Route::prefix('v1')->group(function () {
             Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy']);
             Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit']);
             Route::get('/surveys/{survey}/responses', [SurveyController::class, 'responses']);
+            Route::get('/surveys/{survey}/results', [SurveyController::class, 'results']);
+            Route::post('/surveys/{survey}/duplicate', [SurveyController::class, 'duplicate']);
+            Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportCsv']);
 
             // Check-ins
             Route::get('/check-ins', [CheckInController::class, 'index']);
@@ -226,6 +271,145 @@ Route::prefix('v1')->group(function () {
             Route::put('/field-reports/{fieldReport}', [FieldReportController::class, 'update']);
             Route::post('/field-reports/{fieldReport}/reprocess', [FieldReportController::class, 'reprocess']);
             Route::delete('/field-reports/{fieldReport}', [FieldReportController::class, 'destroy']);
+
+            // --- Phase 1E: Strategy ---
+
+            // Strategy notes
+            Route::get('/strategy/notes', [StrategyController::class, 'notesIndex']);
+            Route::post('/strategy/notes', [StrategyController::class, 'notesStore']);
+            Route::get('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesShow']);
+            Route::put('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesUpdate']);
+            Route::delete('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesDestroy']);
+
+            // Ward targets
+            Route::get('/strategy/ward-targets', [StrategyController::class, 'wardTargetsIndex']);
+            Route::post('/strategy/ward-targets', [StrategyController::class, 'wardTargetsStore']);
+            Route::put('/strategy/ward-targets/{wardTarget}', [StrategyController::class, 'wardTargetsUpdate']);
+            Route::delete('/strategy/ward-targets/{wardTarget}', [StrategyController::class, 'wardTargetsDestroy']);
+
+            // Polls
+            Route::get('/strategy/polls', [StrategyController::class, 'pollsIndex']);
+            Route::post('/strategy/polls', [StrategyController::class, 'pollsStore']);
+            Route::get('/strategy/polls/{poll}', [StrategyController::class, 'pollsShow']);
+            Route::delete('/strategy/polls/{poll}', [StrategyController::class, 'pollsDestroy']);
+
+            // --- Phase 1F: Messaging ---
+
+            // Message templates
+            Route::get('/messaging/templates', [MessagingController::class, 'templatesIndex']);
+            Route::post('/messaging/templates', [MessagingController::class, 'templatesStore']);
+            Route::get('/messaging/templates/{template}', [MessagingController::class, 'templatesShow']);
+            Route::put('/messaging/templates/{template}', [MessagingController::class, 'templatesUpdate']);
+            Route::delete('/messaging/templates/{template}', [MessagingController::class, 'templatesDestroy']);
+            Route::post('/messaging/templates/{template}/approve', [MessagingController::class, 'templatesApprove']);
+
+            // Message campaigns
+            Route::get('/messaging/campaigns', [MessagingController::class, 'campaignsIndex']);
+            Route::post('/messaging/campaigns', [MessagingController::class, 'campaignsStore']);
+            Route::get('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsShow']);
+            Route::put('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsUpdate']);
+            Route::delete('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsDestroy']);
+            Route::post('/messaging/campaigns/{messageCampaign}/approve', [MessagingController::class, 'campaignsApprove']);
+            Route::post('/messaging/campaigns/{messageCampaign}/send', [MessagingController::class, 'campaignsSend']);
+
+            // --- Phase 1G: Finance ---
+
+            // Budgets
+            Route::get('/finance/budgets', [FinanceController::class, 'budgetsIndex']);
+            Route::post('/finance/budgets', [FinanceController::class, 'budgetsStore']);
+            Route::get('/finance/budgets/{budget}', [FinanceController::class, 'budgetsShow']);
+            Route::put('/finance/budgets/{budget}', [FinanceController::class, 'budgetsUpdate']);
+            Route::delete('/finance/budgets/{budget}', [FinanceController::class, 'budgetsDestroy']);
+
+            // Expenses
+            Route::get('/finance/expenses', [FinanceController::class, 'expensesIndex']);
+            Route::post('/finance/expenses', [FinanceController::class, 'expensesStore']);
+            Route::get('/finance/expenses/export', [FinanceController::class, 'expensesExport']);
+            Route::get('/finance/expenses/{expense}', [FinanceController::class, 'expensesShow']);
+            Route::put('/finance/expenses/{expense}', [FinanceController::class, 'expensesUpdate']);
+            Route::delete('/finance/expenses/{expense}', [FinanceController::class, 'expensesDestroy']);
+            Route::post('/finance/expenses/{expense}/approve', [FinanceController::class, 'expensesApprove']);
+            Route::post('/finance/expenses/{expense}/reject', [FinanceController::class, 'expensesReject']);
+
+            // Donations
+            Route::get('/finance/donations', [FinanceController::class, 'donationsIndex']);
+            Route::post('/finance/donations', [FinanceController::class, 'donationsStore']);
+            Route::get('/finance/donations/export', [FinanceController::class, 'donationsExport']);
+            Route::get('/finance/donations/{donation}', [FinanceController::class, 'donationsShow']);
+
+            // Finance summary
+            Route::get('/finance/summary', [FinanceController::class, 'financeSummary']);
+
+            // M-Pesa STK Push
+            Route::post('/finance/mpesa/stk-push', [FinanceController::class, 'mpesaStkPush']);
+            Route::post('/finance/mpesa/stk-query', [FinanceController::class, 'mpesaStkQuery']);
+
+            // --- Phase 1H: Election Day ---
+
+            // Polling stations
+            Route::get('/election-day/stations', [ElectionDayController::class, 'stationsIndex']);
+            Route::post('/election-day/stations', [ElectionDayController::class, 'stationsStore']);
+            Route::get('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsShow']);
+            Route::put('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsUpdate']);
+            Route::delete('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsDestroy']);
+
+            // Tally results
+            Route::get('/election-day/tallies', [ElectionDayController::class, 'talliesIndex']);
+            Route::post('/election-day/tallies', [ElectionDayController::class, 'talliesStore']);
+            Route::get('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesShow']);
+            Route::put('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesUpdate']);
+            Route::post('/election-day/tallies/{tallyResult}/verify', [ElectionDayController::class, 'talliesVerify']);
+            Route::post('/election-day/tallies/{tallyResult}/dispute', [ElectionDayController::class, 'talliesDispute']);
+            Route::delete('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesDestroy']);
+
+            // Tally board + command centre
+            Route::get('/election-day/tally-board', [ElectionDayController::class, 'tallyBoard']);
+            Route::get('/election-day/command-centre', [ElectionDayController::class, 'commandCentre']);
+
+            // Incidents
+            Route::get('/election-day/incidents', [ElectionDayController::class, 'incidentsIndex']);
+            Route::post('/election-day/incidents', [ElectionDayController::class, 'incidentsStore']);
+            Route::get('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsShow']);
+            Route::put('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsUpdate']);
+            Route::post('/election-day/incidents/{incident}/resolve', [ElectionDayController::class, 'incidentsResolve']);
+            Route::post('/election-day/incidents/{incident}/escalate', [ElectionDayController::class, 'incidentsEscalate']);
+            Route::delete('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsDestroy']);
+
+            // Result forms (Form 34A/B/C)
+            Route::get('/election-day/forms', [ElectionDayController::class, 'formsIndex']);
+            Route::post('/election-day/forms', [ElectionDayController::class, 'formsStore']);
+            Route::get('/election-day/forms/{resultForm}', [ElectionDayController::class, 'formsShow']);
+            Route::post('/election-day/forms/{resultForm}/verify', [ElectionDayController::class, 'formsVerify']);
+            Route::post('/election-day/forms/{resultForm}/dispute', [ElectionDayController::class, 'formsDispute']);
+            Route::delete('/election-day/forms/{resultForm}', [ElectionDayController::class, 'formsDestroy']);
+            Route::get('/election-day/forms/{resultForm}/compare', [ElectionDayController::class, 'formsCompare']);
+
+            // --- Phase 1I: Reports & Analytics ---
+
+            // Reports
+            Route::get('/reports', [ReportsController::class, 'index']);
+            Route::post('/reports/generate', [ReportsController::class, 'generate']);
+            Route::get('/reports/export', [ReportsController::class, 'export']);
+            Route::get('/reports/{report}', [ReportsController::class, 'show']);
+            Route::delete('/reports/{report}', [ReportsController::class, 'destroy']);
+
+            // Analytics
+            Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
+            Route::get('/analytics/voter-growth', [AnalyticsController::class, 'voterGrowth']);
+            Route::get('/analytics/field-activity', [AnalyticsController::class, 'fieldActivity']);
+            Route::get('/analytics/finance-trends', [AnalyticsController::class, 'financeTrends']);
+            Route::get('/analytics/geographic', [AnalyticsController::class, 'geographicBreakdown']);
         });
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| M-Pesa Daraja Webhook Routes (public, no auth)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/webhooks/mpesa')->group(function () {
+    Route::post('/stk-callback', [MpesaWebhookController::class, 'stkCallback']);
+    Route::post('/c2b-validation', [MpesaWebhookController::class, 'c2bValidation']);
+    Route::post('/c2b-confirmation', [MpesaWebhookController::class, 'c2bConfirmation']);
 });

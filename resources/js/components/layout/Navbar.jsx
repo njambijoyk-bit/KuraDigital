@@ -17,6 +17,9 @@ export default function Navbar() {
         { to: `${base}/news`, label: 'News' },
         { to: `${base}/gallery`, label: 'Gallery' },
         { to: `${base}/contact`, label: 'Contact' },
+        { to: `${base}/surveys`, label: 'Surveys' },
+        { to: `${base}/results`, label: 'Results' },
+        { to: `${base}/donate`, label: 'Donate' },
         { to: `${base}/register`, label: 'Register' },
     ];
 
@@ -45,8 +48,8 @@ export default function Navbar() {
                                 {link.label}
                             </Link>
                         ))}
-                        <Link to={`${base}/volunteer`} className="btn-primary ml-2 text-sm !px-4 !py-2">
-                            Get Involved
+                        <Link to={`${base}/donate`} className="bg-accent-500 text-white ml-2 text-sm px-4 py-2 rounded-lg font-semibold hover:bg-accent-600 transition-colors">
+                            Donate
                         </Link>
                         <button
                             onClick={toggleLanguage}
@@ -86,11 +89,11 @@ export default function Navbar() {
                             </Link>
                         ))}
                         <Link
-                            to={`${base}/volunteer`}
+                            to={`${base}/donate`}
                             onClick={() => setMobileOpen(false)}
                             className="block w-full btn-primary text-center mt-2"
                         >
-                            Get Involved
+                            Donate
                         </Link>
                         <button
                             onClick={toggleLanguage}

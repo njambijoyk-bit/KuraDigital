@@ -134,7 +134,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
-        $user->load(['campaignMemberships.campaign', 'roles', 'permissions']);
+        $user->load(['campaignMemberships.campaign.site', 'roles', 'permissions']);
 
         return response()->json([
             'user' => $this->formatUser($user),
@@ -144,6 +144,7 @@ class AuthController extends Controller
                     'id' => $m->campaign->id,
                     'name' => $m->campaign->name,
                     'slug' => $m->campaign->slug,
+                    'site_slug' => $m->campaign->site?->slug,
                     'level' => $m->campaign->level,
                     'role' => $m->role,
                     'permissions' => $role->permissions->pluck('name'),

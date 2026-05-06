@@ -125,6 +125,91 @@ class Campaign extends Model
         return $this->hasMany(AgentSchedule::class);
     }
 
+    public function strategyNotes(): HasMany
+    {
+        return $this->hasMany(StrategyNote::class);
+    }
+
+    public function wardTargets(): HasMany
+    {
+        return $this->hasMany(WardTarget::class);
+    }
+
+    public function polls(): HasMany
+    {
+        return $this->hasMany(Poll::class);
+    }
+
+    public function messageTemplates(): HasMany
+    {
+        return $this->hasMany(MessageTemplate::class);
+    }
+
+    public function messageCampaigns(): HasMany
+    {
+        return $this->hasMany(MessageCampaign::class);
+    }
+
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(Budget::class);
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    public function donations(): HasMany
+    {
+        return $this->hasMany(Donation::class);
+    }
+
+    public function mpesaTransactions(): HasMany
+    {
+        return $this->hasMany(MpesaTransaction::class);
+    }
+
+    public function pollingStations(): HasMany
+    {
+        return $this->hasMany(PollingStation::class);
+    }
+
+    public function tallyResults(): HasMany
+    {
+        return $this->hasMany(TallyResult::class);
+    }
+
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(Incident::class);
+    }
+
+    public function resultForms(): HasMany
+    {
+        return $this->hasMany(ResultForm::class);
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
+    }
+
+    public function canvassingAssignments(): HasMany
+    {
+        return $this->hasMany(CanvassingAssignment::class);
+    }
+
+    public function voterInteractions(): HasMany
+    {
+        return $this->hasMany(VoterInteraction::class);
+    }
+
+    public function agentCheckIns(): HasMany
+    {
+        return $this->hasMany(AgentCheckIn::class);
+    }
+
     public function ancestors(): array
     {
         $ancestors = [];

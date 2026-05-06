@@ -27,6 +27,13 @@ const useSiteStore = create((set, get) => ({
         if (language === 'sw' && site[`${field}_sw`]) return site[`${field}_sw`];
         return site[field] || '';
     },
+
+    translateField: (obj, field) => {
+        const { language } = get();
+        if (!obj) return '';
+        if (language === 'sw' && obj[`${field}_sw`]) return obj[`${field}_sw`];
+        return obj[field] || '';
+    },
 }));
 
 export default useSiteStore;

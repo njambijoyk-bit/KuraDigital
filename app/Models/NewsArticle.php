@@ -12,7 +12,7 @@ class NewsArticle extends Model
     use Auditable, HasFactory;
 
     protected $fillable = [
-        'site_id', 'title', 'excerpt', 'body', 'image_url', 'date',
+        'site_id', 'title', 'title_sw', 'excerpt', 'excerpt_sw', 'body', 'body_sw', 'image_url', 'date',
         'is_published', 'status', 'scheduled_at', 'author_id',
     ];
 

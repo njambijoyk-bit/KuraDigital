@@ -14,6 +14,7 @@ import {
     DocumentChartBarIcon,
     MapPinIcon,
     CameraIcon,
+    ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import StatsCard from '../components/StatsCard';
@@ -85,7 +86,20 @@ export default function DashboardPage() {
         <div className="space-y-6">
             {/* Campaign header */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-xl font-heading font-bold text-gray-900">{campaign?.name}</h2>
+                <div className="flex items-start justify-between gap-4">
+                    <h2 className="text-xl font-heading font-bold text-gray-900">{campaign?.name}</h2>
+                    {campaign?.site?.slug && (
+                        <a
+                            href={`/${campaign.site.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg transition flex-shrink-0"
+                        >
+                            <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                            View Site
+                        </a>
+                    )}
+                </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                     <span className="px-2.5 py-0.5 bg-primary-50 text-primary-700 text-xs font-medium rounded-full capitalize">
                         {campaign?.election_type?.replace('_', ' ')}

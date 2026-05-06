@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 import useContentStore from '../stores/useContentStore';
 
@@ -23,6 +24,11 @@ export default function ManifestoPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Manifesto | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`${site?.candidate_name || 'Campaign'} manifesto and key priorities.`} />
+            </Helmet>
+
             <section className="bg-dark-900 text-white py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">Our Manifesto</h1>
