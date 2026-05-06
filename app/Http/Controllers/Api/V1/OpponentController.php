@@ -348,10 +348,15 @@ class OpponentController extends Controller
             ->keyBy('sentiment_label');
 
         // Research sentiment over time (monthly)
+        $driver = $opponent->research()->getQuery()->getConnection()->getDriverName();
+        $monthExpr = $driver === 'sqlite'
+            ? "strftime('%Y-%m', created_at)"
+            : "DATE_FORMAT(created_at, '%Y-%m')";
+
         $researchTimeline = $opponent->research()
             ->whereNotNull('sentiment_score')
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, AVG(sentiment_score) as avg_score, COUNT(*) as count")
-            ->groupByRaw("DATE_FORMAT(created_at, '%Y-%m')")
+            ->selectRaw("{$monthExpr} as month, AVG(sentiment_score) as avg_score, COUNT(*) as count")
+            ->groupByRaw("{$monthExpr}")
             ->orderBy('month')
             ->get();
 
