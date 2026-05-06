@@ -491,6 +491,17 @@ export default function OpponentsPage() {
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${threatColors[r.threat_level]}`}>{r.threat_level}</span>
             ),
         },
+        {
+            key: 'avg_sentiment_score', label: 'Sentiment', render: (r) => {
+                if (r.sentiment_label == null) return <span className="text-gray-400 text-xs">—</span>;
+                const score = r.avg_sentiment_score != null ? (r.avg_sentiment_score > 0 ? `+${r.avg_sentiment_score}` : r.avg_sentiment_score) : '';
+                return (
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${sentimentBadgeColors[r.sentiment_label] || 'bg-gray-100 text-gray-600'}`}>
+                        {r.sentiment_label} ({score})
+                    </span>
+                );
+            },
+        },
         { key: 'research_count', label: 'Research', render: (r) => <span className="text-gray-500 text-sm">{r.research_count || 0} notes</span> },
         {
             key: 'actions', label: '', render: (r) => (
