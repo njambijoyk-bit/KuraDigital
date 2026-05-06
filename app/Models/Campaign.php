@@ -180,6 +180,11 @@ class Campaign extends Model
         return $this->hasMany(Incident::class);
     }
 
+    public function resultForms(): HasMany
+    {
+        return $this->hasMany(ResultForm::class);
+    }
+
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class);

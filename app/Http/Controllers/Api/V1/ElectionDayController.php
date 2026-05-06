@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\Incident;
 use App\Models\PollingStation;
+use App\Models\ResultForm;
 use App\Models\TallyResult;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ElectionDayController extends Controller
 {
@@ -472,5 +474,177 @@ class ElectionDayController extends Controller
         $incident->delete();
 
         return response()->json(['message' => 'Incident deleted.']);
+    }
+
+    // =====================================================================
+    // Result Forms (Form 34A/B/C)
+    // =====================================================================
+
+    public function formsIndex(Request $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('viewAny', [TallyResult::class, $campaign]);
+
+        $query = $campaign->resultForms()
+            ->with(['pollingStation:id,name,code,ward,constituency', 'uploader:id,name']);
+
+        if ($request->has('form_type')) {
+            $query->where('form_type', $request->input('form_type'));
+        }
+        if ($request->has('status')) {
+            $query->where('status', $request->input('status'));
+        }
+        if ($request->has('polling_station_id')) {
+            $query->where('polling_station_id', $request->input('polling_station_id'));
+        }
+
+        return response()->json($query->orderBy('created_at', 'desc')->paginate($request->input('per_page', 25)));
+    }
+
+    public function formsStore(Request $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('create', [TallyResult::class, $campaign]);
+
+        $validated = $request->validate([
+            'polling_station_id' => ['required', 'exists:polling_stations,id'],
+            'form_type' => ['required', 'string', 'in:34A,34B,34C'],
+            'image' => ['required', 'image', 'max:10240'],
+            'parsed_results' => ['nullable', 'json'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        PollingStation::where('campaign_id', $campaign->id)
+            ->where('id', $validated['polling_station_id'])
+            ->firstOrFail();
+
+        $path = $request->file('image')->store(
+            "campaigns/{$campaign->id}/result-forms",
+            'public'
+        );
+
+        $form = ResultForm::create([
+            'campaign_id' => $campaign->id,
+            'polling_station_id' => $validated['polling_station_id'],
+            'uploaded_by' => $request->user()->id,
+            'form_type' => $validated['form_type'],
+            'image_path' => $path,
+            'parsed_results' => $validated['parsed_results'] ? json_decode($validated['parsed_results'], true) : null,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return response()->json($form->load(['pollingStation:id,name,code', 'uploader:id,name']), 201);
+    }
+
+    public function formsShow(Request $request, Campaign $campaign, ResultForm $resultForm): JsonResponse
+    {
+        $this->authorize('viewAny', [TallyResult::class, $campaign]);
+
+        return response()->json(
+            $resultForm->load(['pollingStation:id,name,code,ward,constituency', 'uploader:id,name', 'verifier:id,name'])
+        );
+    }
+
+    public function formsVerify(Request $request, Campaign $campaign, ResultForm $resultForm): JsonResponse
+    {
+        $this->authorize('verify', [TallyResult::class, $campaign]);
+
+        if ($resultForm->status === 'verified') {
+            return response()->json(['message' => 'Already verified.'], 422);
+        }
+
+        $resultForm->update([
+            'status' => 'verified',
+            'verified_by' => $request->user()->id,
+            'verified_at' => now(),
+        ]);
+
+        return response()->json($resultForm->fresh(['pollingStation:id,name,code', 'verifier:id,name']));
+    }
+
+    public function formsDispute(Request $request, Campaign $campaign, ResultForm $resultForm): JsonResponse
+    {
+        $this->authorize('verify', [TallyResult::class, $campaign]);
+
+        $request->validate([
+            'notes' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $resultForm->update([
+            'status' => 'disputed',
+            'notes' => $request->input('notes'),
+        ]);
+
+        return response()->json($resultForm->fresh());
+    }
+
+    public function formsDestroy(Request $request, Campaign $campaign, ResultForm $resultForm): JsonResponse
+    {
+        $this->authorize('verify', [TallyResult::class, $campaign]);
+
+        if ($resultForm->image_path) {
+            Storage::disk('public')->delete($resultForm->image_path);
+        }
+
+        $resultForm->delete();
+
+        return response()->json(['message' => 'Result form deleted.']);
+    }
+
+    public function formsCompare(Request $request, Campaign $campaign, ResultForm $resultForm): JsonResponse
+    {
+        $this->authorize('viewAny', [TallyResult::class, $campaign]);
+
+        $agentTallies = TallyResult::where('campaign_id', $campaign->id)
+            ->where('polling_station_id', $resultForm->polling_station_id)
+            ->get(['candidate_name', 'party', 'votes', 'rejected_votes', 'total_votes_cast', 'status']);
+
+        return response()->json([
+            'form' => $resultForm->load(['pollingStation:id,name,code', 'uploader:id,name']),
+            'agent_tallies' => $agentTallies,
+            'discrepancies' => $this->findDiscrepancies($resultForm, $agentTallies),
+        ]);
+    }
+
+    private function findDiscrepancies(ResultForm $form, $agentTallies): array
+    {
+        if (!$form->parsed_results || !count($agentTallies)) {
+            return [];
+        }
+
+        $discrepancies = [];
+        $parsed = collect($form->parsed_results);
+
+        foreach ($agentTallies as $tally) {
+            $formEntry = $parsed->firstWhere('candidate_name', $tally->candidate_name);
+            if (!$formEntry) {
+                $discrepancies[] = [
+                    'type' => 'missing_in_form',
+                    'candidate' => $tally->candidate_name,
+                    'agent_votes' => $tally->votes,
+                ];
+                continue;
+            }
+            if (isset($formEntry['votes']) && (int) $formEntry['votes'] !== $tally->votes) {
+                $discrepancies[] = [
+                    'type' => 'vote_mismatch',
+                    'candidate' => $tally->candidate_name,
+                    'form_votes' => (int) $formEntry['votes'],
+                    'agent_votes' => $tally->votes,
+                    'difference' => abs((int) $formEntry['votes'] - $tally->votes),
+                ];
+            }
+        }
+
+        foreach ($parsed as $entry) {
+            $match = $agentTallies->firstWhere('candidate_name', $entry['candidate_name'] ?? null);
+            if (!$match && isset($entry['candidate_name'])) {
+                $discrepancies[] = [
+                    'type' => 'missing_in_agent',
+                    'candidate' => $entry['candidate_name'],
+                    'form_votes' => $entry['votes'] ?? 0,
+                ];
+            }
+        }
+
+        return $discrepancies;
     }
 }

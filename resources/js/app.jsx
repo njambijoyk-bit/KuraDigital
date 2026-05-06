@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { registerServiceWorker } from './lib/registerSW';
 import '../css/app.css';
+import 'leaflet/dist/leaflet.css';
 
 const container = document.getElementById('app');
 const root = createRoot(container);

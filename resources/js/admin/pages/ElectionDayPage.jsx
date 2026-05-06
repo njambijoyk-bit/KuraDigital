@@ -61,7 +61,9 @@ export default function ElectionDayPage() {
                     {[
                         { id: 'tally-board', label: 'Tally Board', perm: 'eday.view-tallies' },
                         { id: 'stations', label: 'Polling Stations', perm: 'eday.view' },
+                        { id: 'station-map', label: 'Station Map', perm: 'eday.view' },
                         { id: 'tallies', label: 'Results', perm: 'eday.view-tallies' },
+                        { id: 'forms', label: 'Form 34A/B', perm: 'eday.view-tallies' },
                         { id: 'incidents', label: 'Incidents', perm: 'eday.view' },
                         { id: 'command-centre', label: 'Command Centre', perm: 'eday.command-centre' },
                     ].filter((t) => can(t.perm)).map((t) => (
@@ -75,7 +77,9 @@ export default function ElectionDayPage() {
 
             {tab === 'tally-board' && <TallyBoardTab campaignId={campaignId} />}
             {tab === 'stations' && <StationsTab campaignId={campaignId} />}
+            {tab === 'station-map' && <StationMapTab campaignId={campaignId} />}
             {tab === 'tallies' && <TalliesTab campaignId={campaignId} />}
+            {tab === 'forms' && <FormsTab campaignId={campaignId} />}
             {tab === 'incidents' && <IncidentsTab campaignId={campaignId} />}
             {tab === 'command-centre' && <CommandCentreTab campaignId={campaignId} />}
         </div>
@@ -89,16 +93,23 @@ export default function ElectionDayPage() {
 function TallyBoardTab({ campaignId }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [autoRefresh, setAutoRefresh] = useState(true);
+
+    const fetchData = useCallback(async () => {
+        try {
+            const { data: resp } = await api.get(`/campaigns/${campaignId}/election-day/tally-board`);
+            setData(resp);
+        } catch { /* handled */ }
+        setLoading(false);
+    }, [campaignId]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
 
     useEffect(() => {
-        (async () => {
-            try {
-                const { data: resp } = await api.get(`/campaigns/${campaignId}/election-day/tally-board`);
-                setData(resp);
-            } catch { /* handled */ }
-            setLoading(false);
-        })();
-    }, [campaignId]);
+        if (!autoRefresh) return;
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
+    }, [autoRefresh, fetchData]);
 
     if (loading) return <div className="text-center py-10 text-gray-500">Loading...</div>;
     if (!data) return <EmptyState icon={FlagIcon} title="No tally data" description="Results will appear here once polling station agents submit tallies." />;
@@ -107,6 +118,16 @@ function TallyBoardTab({ campaignId }) {
 
     return (
         <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Live data</span>
+                <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                        <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="rounded border-gray-300 text-primary-600" />
+                        Auto-refresh (30s)
+                    </label>
+                    <button onClick={fetchData} className="text-sm text-primary-600 hover:text-primary-700 font-medium">Refresh now</button>
+                </div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <StatCard label="Total Stations" value={overview.total_stations} color="blue" />
                 <StatCard label="Reported" value={overview.reported_stations} color="green" />
@@ -669,16 +690,23 @@ function IncidentsTab({ campaignId }) {
 function CommandCentreTab({ campaignId }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [autoRefresh, setAutoRefresh] = useState(true);
+
+    const fetchData = useCallback(async () => {
+        try {
+            const { data: resp } = await api.get(`/campaigns/${campaignId}/election-day/command-centre`);
+            setData(resp);
+        } catch { /* handled */ }
+        setLoading(false);
+    }, [campaignId]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
 
     useEffect(() => {
-        (async () => {
-            try {
-                const { data: resp } = await api.get(`/campaigns/${campaignId}/election-day/command-centre`);
-                setData(resp);
-            } catch { /* handled */ }
-            setLoading(false);
-        })();
-    }, [campaignId]);
+        if (!autoRefresh) return;
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
+    }, [autoRefresh, fetchData]);
 
     if (loading) return <div className="text-center py-10 text-gray-500">Loading...</div>;
     if (!data) return <EmptyState icon={MapPinIcon} title="No data" description="Command Centre data will appear once stations and incidents are created." />;
@@ -687,6 +715,16 @@ function CommandCentreTab({ campaignId }) {
 
     return (
         <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Live command centre</span>
+                <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                        <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="rounded border-gray-300 text-primary-600" />
+                        Auto-refresh (30s)
+                    </label>
+                    <button onClick={fetchData} className="text-sm text-primary-600 hover:text-primary-700 font-medium">Refresh now</button>
+                </div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <StatCard label="Total Stations" value={stations.total} color="blue" />
                 <StatCard label="Open" value={stations.open} color="green" />
@@ -733,6 +771,338 @@ function CommandCentreTab({ campaignId }) {
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// =====================================================================
+// Form 34A/B/C Tab
+// =====================================================================
+
+const FORM_TYPES = ['34A', '34B', '34C'];
+const FORM_STATUSES = ['pending', 'verified', 'disputed', 'rejected'];
+
+function FormsTab({ campaignId }) {
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [meta, setMeta] = useState({});
+    const [page, setPage] = useState(1);
+    const [typeFilter, setTypeFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [showUpload, setShowUpload] = useState(false);
+    const [showCompare, setShowCompare] = useState(null);
+    const [form, setForm] = useState({ polling_station_id: '', form_type: '34A', notes: '' });
+    const [file, setFile] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState(null);
+    const [stations, setStations] = useState([]);
+    const { can } = useCampaignPermissions();
+
+    const fetch = useCallback(async (pg = 1) => {
+        try {
+            const params = new URLSearchParams({ page: pg });
+            if (typeFilter) params.append('form_type', typeFilter);
+            if (statusFilter) params.append('status', statusFilter);
+            const { data } = await api.get(`/campaigns/${campaignId}/election-day/forms?${params}`);
+            setItems(data.data);
+            setMeta(data);
+        } catch { /* handled */ }
+        setLoading(false);
+    }, [campaignId, typeFilter, statusFilter]);
+
+    useEffect(() => { fetch(); }, [fetch]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const { data } = await api.get(`/campaigns/${campaignId}/election-day/stations?per_page=200`);
+                setStations(data.data || []);
+            } catch { /* handled */ }
+        })();
+    }, [campaignId]);
+
+    const handleUpload = async (e) => {
+        e.preventDefault();
+        if (!file || !form.polling_station_id) return;
+        setSubmitting(true);
+        setError(null);
+        try {
+            const fd = new FormData();
+            fd.append('image', file);
+            fd.append('polling_station_id', form.polling_station_id);
+            fd.append('form_type', form.form_type);
+            if (form.notes) fd.append('notes', form.notes);
+            await api.post(`/campaigns/${campaignId}/election-day/forms`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setShowUpload(false);
+            setFile(null);
+            setForm({ polling_station_id: '', form_type: '34A', notes: '' });
+            fetch();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Upload failed');
+        }
+        setSubmitting(false);
+    };
+
+    const handleVerify = async (id) => {
+        try {
+            await api.post(`/campaigns/${campaignId}/election-day/forms/${id}/verify`);
+            fetch(page);
+        } catch { /* handled */ }
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('Delete this form?')) return;
+        try {
+            await api.delete(`/campaigns/${campaignId}/election-day/forms/${id}`);
+            fetch(page);
+        } catch { /* handled */ }
+    };
+
+    const handleCompare = async (id) => {
+        try {
+            const { data } = await api.get(`/campaigns/${campaignId}/election-day/forms/${id}/compare`);
+            setShowCompare(data);
+        } catch { /* handled */ }
+    };
+
+    const columns = [
+        { key: 'id', label: 'ID', render: (r) => `#${r.id}` },
+        { key: 'form_type', label: 'Type', render: (r) => <span className="font-mono font-bold">{r.form_type}</span> },
+        { key: 'station', label: 'Station', render: (r) => r.polling_station?.name || '-' },
+        { key: 'status', label: 'Status', render: (r) => <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[r.status] || ''}`}>{r.status}</span> },
+        { key: 'uploader', label: 'Uploaded By', render: (r) => r.uploader?.name || '-' },
+        { key: 'created_at', label: 'Date', render: (r) => new Date(r.created_at).toLocaleDateString() },
+    ];
+
+    const actions = (row) => (
+        <div className="flex items-center gap-1">
+            <button onClick={() => handleCompare(row.id)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Compare">
+                <MagnifyingGlassIcon className="w-4 h-4" />
+            </button>
+            {can('eday.command-centre') && row.status === 'pending' && (
+                <button onClick={() => handleVerify(row.id)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Verify">
+                    <CheckIcon className="w-4 h-4" />
+                </button>
+            )}
+            {can('eday.command-centre') && (
+                <button onClick={() => handleDelete(row.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                    <TrashIcon className="w-4 h-4" />
+                </button>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
+                        <option value="">All Types</option>
+                        {FORM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
+                        <option value="">All Statuses</option>
+                        {FORM_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </div>
+                <PermissionGate permission="eday.submit-results">
+                    <button onClick={() => setShowUpload(true)} className="btn-primary text-sm flex items-center gap-1">
+                        <PlusIcon className="w-4 h-4" /> Upload Form
+                    </button>
+                </PermissionGate>
+            </div>
+
+            <DataTable columns={columns} data={items} loading={loading} actions={actions} meta={meta} onPageChange={(pg) => { setPage(pg); fetch(pg); }} />
+
+            <Modal isOpen={showUpload} onClose={() => setShowUpload(false)} title="Upload Result Form">
+                <form onSubmit={handleUpload} className="space-y-4">
+                    {error && <div className="text-red-600 text-sm">{error}</div>}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Polling Station *</label>
+                        <select value={form.polling_station_id} onChange={(e) => setForm({ ...form, polling_station_id: e.target.value })} className="w-full border rounded-lg px-3 py-2" required>
+                            <option value="">Select station...</option>
+                            {stations.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Form Type *</label>
+                        <select value={form.form_type} onChange={(e) => setForm({ ...form, form_type: e.target.value })} className="w-full border rounded-lg px-3 py-2">
+                            {FORM_TYPES.map((t) => <option key={t} value={t}>Form {t}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Photo of Form *</label>
+                        <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files[0])} className="w-full border rounded-lg px-3 py-2" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                        <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                        <button type="button" onClick={() => setShowUpload(false)} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
+                        <button type="submit" disabled={submitting} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 disabled:opacity-50">{submitting ? 'Uploading...' : 'Upload'}</button>
+                    </div>
+                </form>
+            </Modal>
+
+            <Modal isOpen={!!showCompare} onClose={() => setShowCompare(null)} title="Compare: Form vs Agent Tallies">
+                {showCompare && (
+                    <div className="space-y-4">
+                        <div className="bg-gray-50 rounded-lg p-4">
+                            <h4 className="font-medium text-sm mb-2">Form {showCompare.form.form_type} — {showCompare.form.polling_station?.name}</h4>
+                            {showCompare.form.image_path && (
+                                <img src={`/storage/${showCompare.form.image_path}`} alt="Form" className="max-h-64 rounded border" />
+                            )}
+                        </div>
+
+                        {showCompare.agent_tallies.length > 0 ? (
+                            <div>
+                                <h4 className="font-medium text-sm mb-2">Agent-Submitted Results</h4>
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left">Candidate</th>
+                                            <th className="px-3 py-2 text-left">Party</th>
+                                            <th className="px-3 py-2 text-right">Votes</th>
+                                            <th className="px-3 py-2 text-left">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {showCompare.agent_tallies.map((t, i) => (
+                                            <tr key={i}>
+                                                <td className="px-3 py-2">{t.candidate_name}</td>
+                                                <td className="px-3 py-2 text-gray-500">{t.party || '-'}</td>
+                                                <td className="px-3 py-2 text-right font-bold">{t.votes.toLocaleString()}</td>
+                                                <td className="px-3 py-2"><span className={`px-2 py-0.5 rounded text-xs ${statusColors[t.status] || ''}`}>{t.status}</span></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500">No agent tallies submitted for this station yet.</p>
+                        )}
+
+                        {showCompare.discrepancies.length > 0 && (
+                            <div className="bg-red-50 rounded-lg p-4">
+                                <h4 className="font-medium text-sm text-red-800 mb-2">Discrepancies Found</h4>
+                                <ul className="space-y-1 text-sm text-red-700">
+                                    {showCompare.discrepancies.map((d, i) => (
+                                        <li key={i}>
+                                            {d.type === 'vote_mismatch' && `${d.candidate}: Form shows ${d.form_votes}, agent shows ${d.agent_votes} (diff: ${d.difference})`}
+                                            {d.type === 'missing_in_form' && `${d.candidate}: Present in agent tallies (${d.agent_votes} votes) but not in form`}
+                                            {d.type === 'missing_in_agent' && `${d.candidate}: Present in form (${d.form_votes} votes) but no agent tally`}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        <div className="flex justify-end">
+                            <button onClick={() => setShowCompare(null)} className="px-4 py-2 border rounded-lg text-sm">Close</button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+        </div>
+    );
+}
+
+// =====================================================================
+// Station Map Tab (Leaflet)
+// =====================================================================
+
+function StationMapTab({ campaignId }) {
+    const [stations, setStations] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [mapReady, setMapReady] = useState(false);
+    const [L, setL] = useState(null);
+    const [RL, setRL] = useState(null);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const { data } = await api.get(`/campaigns/${campaignId}/election-day/stations?per_page=500`);
+                setStations(data.data || []);
+            } catch { /* handled */ }
+            setLoading(false);
+        })();
+    }, [campaignId]);
+
+    useEffect(() => {
+        Promise.all([
+            import('leaflet'),
+            import('react-leaflet'),
+        ]).then(([leaflet, reactLeaflet]) => {
+            setL(leaflet.default || leaflet);
+            setRL(reactLeaflet);
+            setMapReady(true);
+        }).catch(() => setMapReady(false));
+    }, []);
+
+    if (loading) return <div className="text-center py-10 text-gray-500">Loading stations...</div>;
+
+    const geoStations = stations.filter((s) => s.latitude && s.longitude);
+    if (!geoStations.length) {
+        return <EmptyState icon={MapPinIcon} title="No station coordinates" description="Add latitude and longitude to polling stations to see them on the map." />;
+    }
+
+    if (!mapReady || !RL) {
+        return <div className="text-center py-10 text-gray-500">Loading map...</div>;
+    }
+
+    const { MapContainer, TileLayer, CircleMarker, Popup } = RL;
+
+    const center = [
+        geoStations.reduce((s, st) => s + parseFloat(st.latitude), 0) / geoStations.length,
+        geoStations.reduce((s, st) => s + parseFloat(st.longitude), 0) / geoStations.length,
+    ];
+
+    const markerColors = {
+        pending: '#f59e0b',
+        open: '#22c55e',
+        closed: '#6b7280',
+        disputed: '#ef4444',
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-4 text-sm">
+                {Object.entries(markerColors).map(([status, color]) => (
+                    <span key={status} className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                        <span className="capitalize">{status}</span>
+                    </span>
+                ))}
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style={{ height: 500 }}>
+                <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {geoStations.map((st) => (
+                        <CircleMarker
+                            key={st.id}
+                            center={[parseFloat(st.latitude), parseFloat(st.longitude)]}
+                            radius={8}
+                            pathOptions={{ fillColor: markerColors[st.status] || '#6b7280', color: '#fff', weight: 2, fillOpacity: 0.9 }}
+                        >
+                            <Popup>
+                                <div className="text-sm">
+                                    <p className="font-bold">{st.name}</p>
+                                    <p className="text-gray-500">{st.code} &middot; {st.ward}</p>
+                                    <p>Status: <span className="font-medium capitalize">{st.status}</span></p>
+                                    <p>Registered: {st.registered_voters?.toLocaleString()}</p>
+                                </div>
+                            </Popup>
+                        </CircleMarker>
+                    ))}
+                </MapContainer>
+            </div>
+
+            <p className="text-xs text-gray-500">{geoStations.length} stations with coordinates shown on map.</p>
         </div>
     );
 }

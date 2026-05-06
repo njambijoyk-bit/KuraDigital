@@ -58,6 +58,11 @@ class PollingStation extends Model
         return $this->hasMany(Incident::class);
     }
 
+    public function resultForms(): HasMany
+    {
+        return $this->hasMany(ResultForm::class);
+    }
+
     public function getTurnoutPercentAttribute(): float
     {
         if ($this->registered_voters <= 0) {
