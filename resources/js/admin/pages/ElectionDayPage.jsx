@@ -10,6 +10,10 @@ import {
     FlagIcon,
     MapPinIcon,
     ArrowUpIcon,
+    ArrowDownTrayIcon,
+    UserGroupIcon,
+    ChartBarIcon,
+    ShieldExclamationIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import PermissionGate from '../components/PermissionGate';
@@ -47,7 +51,7 @@ const severityColors = {
 
 export default function ElectionDayPage() {
     const { campaignId } = useParams();
-    const [tab, setTab] = useState('tally-board');
+    const [tab, setTab] = useState('summary');
     const { can } = useCampaignPermissions();
 
     return (
@@ -59,28 +63,32 @@ export default function ElectionDayPage() {
             <div className="border-b border-gray-200">
                 <nav className="flex space-x-8">
                     {[
+                        { id: 'summary', label: 'Summary', perm: 'eday.view-tallies' },
                         { id: 'tally-board', label: 'Tally Board', perm: 'eday.view-tallies' },
                         { id: 'stations', label: 'Polling Stations', perm: 'eday.view' },
                         { id: 'station-map', label: 'Station Map', perm: 'eday.view' },
                         { id: 'tallies', label: 'Results', perm: 'eday.view-tallies' },
                         { id: 'forms', label: 'Form 34A/B', perm: 'eday.view-tallies' },
                         { id: 'incidents', label: 'Incidents', perm: 'eday.view' },
+                        { id: 'agents', label: 'Agent Deployment', perm: 'eday.command-centre' },
                         { id: 'command-centre', label: 'Command Centre', perm: 'eday.command-centre' },
                     ].filter((t) => can(t.perm)).map((t) => (
                         <button key={t.id} onClick={() => setTab(t.id)}
-                            className={`py-3 px-1 border-b-2 text-sm font-medium ${tab === t.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                            className={`py-3 px-1 border-b-2 text-sm font-medium whitespace-nowrap ${tab === t.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                             {t.label}
                         </button>
                     ))}
                 </nav>
             </div>
 
+            {tab === 'summary' && <SummaryTab campaignId={campaignId} />}
             {tab === 'tally-board' && <TallyBoardTab campaignId={campaignId} />}
             {tab === 'stations' && <StationsTab campaignId={campaignId} />}
             {tab === 'station-map' && <StationMapTab campaignId={campaignId} />}
             {tab === 'tallies' && <TalliesTab campaignId={campaignId} />}
             {tab === 'forms' && <FormsTab campaignId={campaignId} />}
             {tab === 'incidents' && <IncidentsTab campaignId={campaignId} />}
+            {tab === 'agents' && <AgentDeploymentTab campaignId={campaignId} />}
             {tab === 'command-centre' && <CommandCentreTab campaignId={campaignId} />}
         </div>
     );
@@ -121,6 +129,9 @@ function TallyBoardTab({ campaignId }) {
             <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Live data</span>
                 <div className="flex items-center gap-3">
+                    <a href={`/api/v1/campaigns/${campaignId}/election-day/tallies/export/csv`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 border rounded-lg px-3 py-1.5">
+                        <ArrowDownTrayIcon className="h-4 w-4" /> Export CSV
+                    </a>
                     <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
                         <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="rounded border-gray-300 text-primary-600" />
                         Auto-refresh (30s)
@@ -128,13 +139,24 @@ function TallyBoardTab({ campaignId }) {
                     <button onClick={fetchData} className="text-sm text-primary-600 hover:text-primary-700 font-medium">Refresh now</button>
                 </div>
             </div>
+
+            {overview.turnout_percentage > 100 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                    <ShieldExclamationIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-red-800">Anomaly Detected: Turnout exceeds 100%</p>
+                        <p className="text-sm text-red-700">Overall turnout is {overview.turnout_percentage}% which exceeds the registered voter count. Review individual station tallies for accuracy.</p>
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <StatCard label="Total Stations" value={overview.total_stations} color="blue" />
                 <StatCard label="Reported" value={overview.reported_stations} color="green" />
                 <StatCard label="Reporting %" value={`${overview.reporting_percentage}%`} color="indigo" />
                 <StatCard label="Votes Cast" value={overview.total_votes_cast?.toLocaleString()} color="purple" />
                 <StatCard label="Registered" value={overview.total_registered?.toLocaleString()} color="gray" />
-                <StatCard label="Turnout" value={`${overview.turnout_percentage}%`} color="emerald" />
+                <StatCard label="Turnout" value={`${overview.turnout_percentage}%`} color={overview.turnout_percentage > 100 ? 'red' : 'emerald'} />
             </div>
 
             {candidates && candidates.length > 0 && (
@@ -363,6 +385,7 @@ function TalliesTab({ campaignId }) {
     const [form, setForm] = useState({ polling_station_id: '', candidate_name: '', party: '', votes: '', rejected_votes: '', total_votes_cast: '', notes: '' });
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const [warnings, setWarnings] = useState([]);
     const [page, setPage] = useState(1);
     const [meta, setMeta] = useState({});
     const { can } = useCampaignPermissions();
@@ -385,8 +408,12 @@ function TalliesTab({ campaignId }) {
         e.preventDefault();
         setSubmitting(true);
         setError(null);
+        setWarnings([]);
         try {
-            await api.post(`/campaigns/${campaignId}/election-day/tallies`, form);
+            const { data: resp } = await api.post(`/campaigns/${campaignId}/election-day/tallies`, form);
+            if (resp.warnings && resp.warnings.length > 0) {
+                setWarnings(resp.warnings);
+            }
             setShowCreate(false);
             setForm({ polling_station_id: '', candidate_name: '', party: '', votes: '', rejected_votes: '', total_votes_cast: '', notes: '' });
             fetch();
@@ -435,16 +462,38 @@ function TalliesTab({ campaignId }) {
 
     return (
         <div className="space-y-4">
+            {warnings.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                        <ShieldExclamationIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-sm font-semibold text-amber-800">Anomaly Warnings</p>
+                            <ul className="mt-1 space-y-1">
+                                {warnings.map((w, i) => (
+                                    <li key={i} className="text-sm text-amber-700">{w.message}</li>
+                                ))}
+                            </ul>
+                            <button onClick={() => setWarnings([])} className="mt-2 text-xs text-amber-600 hover:text-amber-800 underline">Dismiss</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center justify-between">
                 <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
                     <option value="">All statuses</option>
                     {TALLY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <PermissionGate permission="eday.submit-results">
-                    <button onClick={() => setShowCreate(true)} className="flex items-center space-x-1 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-primary-700">
-                        <PlusIcon className="h-4 w-4" /><span>Submit Result</span>
-                    </button>
-                </PermissionGate>
+                <div className="flex items-center gap-2">
+                    <a href={`/api/v1/campaigns/${campaignId}/election-day/tallies/export/csv`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 border rounded-lg px-3 py-2">
+                        <ArrowDownTrayIcon className="h-4 w-4" /> CSV
+                    </a>
+                    <PermissionGate permission="eday.submit-results">
+                        <button onClick={() => setShowCreate(true)} className="flex items-center space-x-1 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-primary-700">
+                            <PlusIcon className="h-4 w-4" /><span>Submit Result</span>
+                        </button>
+                    </PermissionGate>
+                </div>
             </div>
 
             <DataTable columns={columns} data={items} loading={loading} actions={actions} meta={meta} onPageChange={(pg) => { setPage(pg); fetch(pg); }} />
@@ -612,11 +661,16 @@ function IncidentsTab({ campaignId }) {
                         {INCIDENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                 </div>
-                <PermissionGate permission="eday.report-incidents">
-                    <button onClick={() => setShowCreate(true)} className="flex items-center space-x-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700">
-                        <ExclamationTriangleIcon className="h-4 w-4" /><span>Report Incident</span>
-                    </button>
-                </PermissionGate>
+                <div className="flex items-center gap-2">
+                    <a href={`/api/v1/campaigns/${campaignId}/election-day/incidents/export/csv`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 border rounded-lg px-3 py-2">
+                        <ArrowDownTrayIcon className="h-4 w-4" /> CSV
+                    </a>
+                    <PermissionGate permission="eday.report-incidents">
+                        <button onClick={() => setShowCreate(true)} className="flex items-center space-x-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700">
+                            <ExclamationTriangleIcon className="h-4 w-4" /><span>Report Incident</span>
+                        </button>
+                    </PermissionGate>
+                </div>
             </div>
 
             <DataTable columns={columns} data={items} loading={loading} actions={actions} meta={meta} onPageChange={(pg) => { setPage(pg); fetch(pg); }} />
@@ -1103,6 +1157,250 @@ function StationMapTab({ campaignId }) {
             </div>
 
             <p className="text-xs text-gray-500">{geoStations.length} stations with coordinates shown on map.</p>
+        </div>
+    );
+}
+
+// =====================================================================
+// Summary / Readiness Tab
+// =====================================================================
+
+function SummaryTab({ campaignId }) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [autoRefresh, setAutoRefresh] = useState(true);
+
+    const fetchData = useCallback(async () => {
+        try {
+            const { data: resp } = await api.get(`/campaigns/${campaignId}/election-day/summary`);
+            setData(resp);
+        } catch { /* handled */ }
+        setLoading(false);
+    }, [campaignId]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    useEffect(() => {
+        if (!autoRefresh) return;
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
+    }, [autoRefresh, fetchData]);
+
+    if (loading) return <div className="text-center py-10 text-gray-500">Loading...</div>;
+    if (!data) return <EmptyState icon={ChartBarIcon} title="No data yet" description="Summary will appear once election day data is available." />;
+
+    const { reporting, turnout, tallies, stations_by_status, incidents, agents, turnout_by_ward } = data;
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Election Day Readiness & Summary</h2>
+                <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                        <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="rounded border-gray-300 text-primary-600" />
+                        Auto-refresh (30s)
+                    </label>
+                    <button onClick={fetchData} className="text-sm text-primary-600 hover:text-primary-700 font-medium">Refresh now</button>
+                </div>
+            </div>
+
+            {turnout.turnout_percentage > 100 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                    <ShieldExclamationIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-red-800">Anomaly: Turnout exceeds 100%</p>
+                        <p className="text-sm text-red-700">Overall turnout is {turnout.turnout_percentage}%. Check station-level tallies for errors.</p>
+                    </div>
+                </div>
+            )}
+
+            {incidents.critical > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-red-800">{incidents.critical} Critical Incident{incidents.critical > 1 ? 's' : ''} Unresolved</p>
+                        <p className="text-sm text-red-700">Immediate attention required. Check the Incidents tab.</p>
+                    </div>
+                </div>
+            )}
+
+            {agents.stations_without_agent > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                    <UserGroupIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-amber-800">{agents.stations_without_agent} Station{agents.stations_without_agent > 1 ? 's' : ''} Without Agents</p>
+                        <p className="text-sm text-amber-700">Assign agents to cover all polling stations.</p>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard label="Stations Reporting" value={`${reporting.reported}/${reporting.total_stations}`} color="blue" />
+                <StatCard label="Reporting %" value={`${reporting.reporting_percentage}%`} color="indigo" />
+                <StatCard label="Turnout" value={`${turnout.turnout_percentage}%`} color={turnout.turnout_percentage > 100 ? 'red' : 'emerald'} />
+                <StatCard label="Votes Cast" value={turnout.total_votes_cast?.toLocaleString()} color="purple" />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <StatCard label="Verified Tallies" value={tallies.verified} color="green" />
+                <StatCard label="Provisional" value={tallies.provisional} color="orange" />
+                <StatCard label="Disputed" value={tallies.disputed} color="red" />
+                <StatCard label="Unresolved Incidents" value={incidents.unresolved} color="red" />
+                <StatCard label="Active Agents" value={`${agents.active}/${agents.total}`} color="blue" />
+                <StatCard label="Unmanned Stations" value={agents.stations_without_agent} color={agents.stations_without_agent > 0 ? 'orange' : 'green'} />
+            </div>
+
+            {turnout_by_ward && turnout_by_ward.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-6 border-b border-gray-200">
+                        <h3 className="text-lg font-semibold">Turnout by Ward</h3>
+                    </div>
+                    <table className="w-full">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ward</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stations</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Reported</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Registered</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Votes Cast</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Turnout</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bar</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {turnout_by_ward.map((w, i) => (
+                                <tr key={i} className={w.turnout > 100 ? 'bg-red-50' : ''}>
+                                    <td className="px-6 py-4 text-sm font-medium">{w.ward || 'Unknown'}</td>
+                                    <td className="px-6 py-4 text-sm text-right">{w.stations}</td>
+                                    <td className="px-6 py-4 text-sm text-right">{w.reported}</td>
+                                    <td className="px-6 py-4 text-sm text-right">{w.registered?.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-sm text-right">{w.votes_cast?.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-sm text-right font-bold">{w.turnout}%</td>
+                                    <td className="px-6 py-4 w-36">
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div className={`h-2.5 rounded-full ${w.turnout > 100 ? 'bg-red-500' : w.turnout > 70 ? 'bg-green-500' : 'bg-blue-400'}`} style={{ width: `${Math.min(w.turnout, 100)}%` }} />
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// =====================================================================
+// Agent Deployment Tab
+// =====================================================================
+
+function AgentDeploymentTab({ campaignId }) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState('all');
+
+    const fetchData = useCallback(async () => {
+        try {
+            const { data: resp } = await api.get(`/campaigns/${campaignId}/election-day/agent-deployment`);
+            setData(resp);
+        } catch { /* handled */ }
+        setLoading(false);
+    }, [campaignId]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    if (loading) return <div className="text-center py-10 text-gray-500">Loading...</div>;
+    if (!data) return <EmptyState icon={UserGroupIcon} title="No agents" description="No field agents found for this campaign." />;
+
+    const { overview, deployed, undeployed, unmanned_stations } = data;
+
+    const filteredAgents = viewMode === 'deployed' ? deployed : viewMode === 'undeployed' ? undeployed : [...deployed, ...undeployed];
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Agent Deployment Status</h2>
+                <button onClick={fetchData} className="text-sm text-primary-600 hover:text-primary-700 font-medium">Refresh</button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard label="Total Agents" value={overview.total_agents} color="blue" />
+                <StatCard label="Checked In" value={overview.checked_in} color="green" />
+                <StatCard label="Not Checked In" value={overview.not_checked_in} color={overview.not_checked_in > 0 ? 'orange' : 'green'} />
+                <StatCard label="Unmanned Stations" value={overview.unmanned_stations} color={overview.unmanned_stations > 0 ? 'red' : 'green'} />
+            </div>
+
+            <div className="flex items-center gap-2">
+                {['all', 'deployed', 'undeployed'].map((mode) => (
+                    <button key={mode} onClick={() => setViewMode(mode)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize ${viewMode === mode ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                        {mode} ({mode === 'all' ? deployed.length + undeployed.length : mode === 'deployed' ? deployed.length : undeployed.length})
+                    </button>
+                ))}
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table className="w-full">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agent</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ward</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Station</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Checked In</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scheduled</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                        {filteredAgents.map((agent) => (
+                            <tr key={agent.id} className={!agent.checked_in_today && agent.scheduled_today ? 'bg-red-50' : ''}>
+                                <td className="px-6 py-4 text-sm font-medium">{agent.name}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500 font-mono">{agent.agent_code || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{agent.phone || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{agent.ward || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{agent.assigned_station || '-'}</td>
+                                <td className="px-6 py-4 text-sm">
+                                    {agent.checked_in_today
+                                        ? <span className="px-2 py-0.5 bg-green-50 text-green-800 rounded text-xs font-medium">Yes</span>
+                                        : <span className="px-2 py-0.5 bg-red-50 text-red-800 rounded text-xs font-medium">No</span>
+                                    }
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                    {agent.scheduled_today
+                                        ? <span className="px-2 py-0.5 bg-blue-50 text-blue-800 rounded text-xs font-medium">Yes</span>
+                                        : <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">No</span>
+                                    }
+                                </td>
+                            </tr>
+                        ))}
+                        {filteredAgents.length === 0 && (
+                            <tr><td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">No agents in this category.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {unmanned_stations.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
+                    <div className="p-6 border-b border-red-200 bg-red-50">
+                        <h3 className="text-lg font-semibold text-red-800">Unmanned Stations ({unmanned_stations.length})</h3>
+                        <p className="text-sm text-red-600">These stations have no assigned agent.</p>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                        {unmanned_stations.map((station) => (
+                            <div key={station.id} className="px-6 py-3 flex justify-between items-center">
+                                <div>
+                                    <span className="text-sm font-medium">{station.name}</span>
+                                    <span className="text-sm text-gray-500 ml-2">{station.code}</span>
+                                </div>
+                                <span className="text-sm text-gray-500">{station.ward}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
