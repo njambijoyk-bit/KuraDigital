@@ -78,6 +78,7 @@ export default function Footer() {
                             <li><Link to={`${base}/volunteer`} className="hover:text-white transition-colors">Volunteer</Link></li>
                             <li><Link to={`${base}/contact`} className="hover:text-white transition-colors">Contact Us</Link></li>
                         </ul>
+
                         {site?.phone && (
                             <div className="mt-4">
                                 <a href={`https://wa.me/${site.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 
 export default function PlatformHomePage() {
     const [sites, setSites] = useState([]);
@@ -27,6 +28,13 @@ export default function PlatformHomePage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            <Helmet>
+                <title>KuraDigital — Campaign Sites Platform</title>
+                <meta name="description" content="Discover and explore political campaign sites across Kenya. KuraDigital empowers candidates with digital tools." />
+                <meta property="og:title" content="KuraDigital" />
+                <meta property="og:description" content="Kenya's political campaign management platform." />
+            </Helmet>
+
             {/* Hero */}
             <header className="bg-gradient-to-br from-green-700 to-green-900 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">

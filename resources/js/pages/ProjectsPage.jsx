@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 import useContentStore from '../stores/useContentStore';
 
@@ -30,6 +31,11 @@ export default function ProjectsPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Projects | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`Projects and track record from ${site?.candidate_name || 'the campaign'}.`} />
+            </Helmet>
+
             <section className="bg-dark-900 text-white py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">Projects & Track Record</h1>

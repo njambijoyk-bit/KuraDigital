@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 import useContentStore from '../stores/useContentStore';
 
@@ -26,6 +27,11 @@ export default function GalleryPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Gallery | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`Photo gallery from ${site?.candidate_name || 'the campaign'}.`} />
+            </Helmet>
+
             <section className="bg-dark-900 text-white py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">Photo Gallery</h1>

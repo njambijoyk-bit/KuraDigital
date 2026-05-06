@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 function generateICS(event) {
@@ -88,6 +89,14 @@ export default function EventDetailPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>{event.title} | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={event.description?.substring(0, 160) || `Event: ${event.title}`} />
+                <meta property="og:title" content={event.title} />
+                <meta property="og:description" content={event.description?.substring(0, 160) || ''} />
+                <meta property="og:type" content="event" />
+            </Helmet>
+
             <section className="bg-dark-900 text-white py-16">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                     <Link to={`/${slug}/events`} className="text-sm text-gray-400 hover:text-white mb-4 inline-block">&larr; Back to Events</Link>

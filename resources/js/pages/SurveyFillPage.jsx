@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 export default function SurveyFillPage() {
@@ -93,6 +94,11 @@ export default function SurveyFillPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>{survey?.title || 'Survey'} | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={survey?.description?.substring(0, 160) || 'Take part in our community survey.'} />
+            </Helmet>
+
             <section className="py-10" style={{ background: `linear-gradient(135deg, ${primaryColor}ee, ${site?.secondary_color || '#0f172a'}ee)` }}>
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
                     <Link to={`/${slug}/surveys`} className="text-sm opacity-75 hover:opacity-100 mb-4 inline-block">&larr; All Surveys</Link>

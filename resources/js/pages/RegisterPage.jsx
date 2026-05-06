@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Link, useParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 const emptyForm = {
@@ -37,6 +38,11 @@ export default function RegisterPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Register Support | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`Register your support for ${site?.candidate_name || 'the campaign'}.`} />
+            </Helmet>
+
             {/* Hero */}
             <section
                 className="relative py-20 text-white"

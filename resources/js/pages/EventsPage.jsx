@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 import useContentStore from '../stores/useContentStore';
 
@@ -52,6 +53,11 @@ export default function EventsPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Upcoming Events | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`Upcoming events for ${site?.candidate_name || 'the campaign'}. Join us on the campaign trail.`} />
+            </Helmet>
+
             <section className="bg-dark-900 text-white py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">Upcoming Events</h1>

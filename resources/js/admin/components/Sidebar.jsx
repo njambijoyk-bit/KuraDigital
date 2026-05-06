@@ -27,8 +27,10 @@ import {
     FlagIcon,
     ChartBarIcon,
     PresentationChartLineIcon,
+    EyeIcon,
 } from '@heroicons/react/24/outline';
 import useCampaignPermissions from '../hooks/useCampaignPermissions';
+import useAuthStore from '../stores/useAuthStore';
 
 const campaignNav = [
     { to: '', icon: HomeIcon, label: 'Dashboard', end: true, requiredPermission: null },
@@ -60,7 +62,10 @@ const campaignNav = [
 export default function Sidebar() {
     const { campaignId } = useParams();
     const { can, role } = useCampaignPermissions();
+    const { getCampaignMembership } = useAuthStore();
     const base = `/admin/campaigns/${campaignId}`;
+    const membership = getCampaignMembership(campaignId);
+    const siteSlug = membership?.site_slug;
 
     const visibleNav = campaignNav.filter(
         (item) => item.requiredPermission === null || can(item.requiredPermission)
@@ -75,7 +80,7 @@ export default function Sidebar() {
                 </NavLink>
             </div>
 
-            <div className="px-3 pt-4 pb-2">
+            <div className="px-3 pt-4 pb-2 space-y-1">
                 <NavLink
                     to="/admin"
                     className="flex items-center space-x-2 text-sm text-gray-400 hover:text-white transition-colors px-2 py-1.5 rounded"
@@ -83,6 +88,17 @@ export default function Sidebar() {
                     <ChevronLeftIcon className="h-4 w-4" />
                     <span>All Campaigns</span>
                 </NavLink>
+                {siteSlug && (
+                    <a
+                        href={`/${siteSlug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-2 text-sm text-primary-400 hover:text-primary-300 transition-colors px-2 py-1.5 rounded bg-primary-600/10 hover:bg-primary-600/20"
+                    >
+                        <EyeIcon className="h-4 w-4" />
+                        <span>View Site</span>
+                    </a>
+                )}
             </div>
 
             {role && (
