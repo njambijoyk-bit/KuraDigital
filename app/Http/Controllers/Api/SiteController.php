@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\Donation;
 use App\Models\MpesaTransaction;
 use App\Models\Site;
+use App\Models\TallyResult;
 use App\Models\Voter;
 use App\Services\MpesaDarajaService;
 use Illuminate\Http\Request;
@@ -333,6 +334,57 @@ class SiteController extends Controller
         return response()->json([
             'message' => 'Check your phone to complete the M-Pesa payment.',
             'checkout_request_id' => $result['checkout_request_id'],
+        ]);
+    }
+
+    public function electionResults(string $siteId)
+    {
+        $site = Site::findOrFail($siteId);
+        $campaign = Campaign::where('site_id', $site->id)->first();
+
+        if (!$campaign) {
+            return response()->json(['data' => ['candidates' => [], 'overview' => null, 'stations' => []]]);
+        }
+
+        $results = $campaign->tallyResults()
+            ->with('pollingStation:id,name,code,ward,constituency,county,registered_voters,latitude,longitude,status')
+            ->where('status', '!=', 'disputed')
+            ->get();
+
+        $candidateTotals = $results->groupBy('candidate_name')->map(function ($group, $name) {
+            return [
+                'candidate_name' => $name,
+                'party' => $group->first()->party,
+                'total_votes' => $group->sum('votes'),
+                'stations_reported' => $group->pluck('polling_station_id')->unique()->count(),
+                'verified_count' => $group->where('status', 'verified')->count(),
+            ];
+        })->sortByDesc('total_votes')->values();
+
+        $totalStations = $campaign->pollingStations()->count();
+        $reportedStations = $results->pluck('polling_station_id')->unique()->count();
+        $totalVotesCast = $results->groupBy('polling_station_id')
+            ->map(fn ($g) => $g->max('total_votes_cast'))->sum();
+        $totalRegistered = $campaign->pollingStations()->sum('registered_voters');
+
+        $stations = $campaign->pollingStations()
+            ->select('id', 'name', 'code', 'ward', 'constituency', 'county', 'registered_voters', 'latitude', 'longitude', 'status')
+            ->get();
+
+        return response()->json([
+            'data' => [
+                'candidates' => $candidateTotals,
+                'overview' => [
+                    'total_stations' => $totalStations,
+                    'reported_stations' => $reportedStations,
+                    'reporting_percentage' => $totalStations > 0 ? round(($reportedStations / $totalStations) * 100, 1) : 0,
+                    'total_votes_cast' => $totalVotesCast,
+                    'total_registered' => $totalRegistered,
+                    'turnout_percentage' => $totalRegistered > 0 ? round(($totalVotesCast / $totalRegistered) * 100, 1) : 0,
+                ],
+                'stations' => $stations,
+                'last_updated' => $results->max('updated_at'),
+            ],
         ]);
     }
 }

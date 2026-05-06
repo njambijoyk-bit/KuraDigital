@@ -13,6 +13,7 @@ import GalleryPage from './pages/GalleryPage';
 import ContactPage from './pages/ContactPage';
 import VolunteerPage from './pages/VolunteerPage';
 import DonatePage from './pages/DonatePage';
+import ResultsPage from './pages/ResultsPage';
 import ProjectsPage from './pages/ProjectsPage';
 import RegisterPage from './pages/RegisterPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -63,6 +64,7 @@ function SiteWrapper() {
                 <Route path="contact" element={<ContactPage />} />
                 <Route path="volunteer" element={<VolunteerPage />} />
                 <Route path="donate" element={<DonatePage />} />
+                <Route path="results" element={<ResultsPage />} />
                 <Route path="projects" element={<ProjectsPage />} />
                 <Route path="register" element={<RegisterPage />} />
                 <Route path="*" element={<NotFoundPage />} />

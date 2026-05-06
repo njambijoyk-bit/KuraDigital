@@ -51,6 +51,7 @@ Route::post('/sites/{siteId}/volunteers', [SiteController::class, 'storeVoluntee
 Route::post('/sites/{siteId}/register-supporter', [SiteController::class, 'registerSupporter']);
 Route::get('/sites/{siteId}/donations/stats', [SiteController::class, 'donationStats']);
 Route::post('/sites/{siteId}/donate', [SiteController::class, 'donate']);
+Route::get('/sites/{siteId}/election-results', [SiteController::class, 'electionResults']);
 
 /*
 |--------------------------------------------------------------------------
@@ -351,6 +352,15 @@ Route::prefix('v1')->group(function () {
             Route::post('/election-day/incidents/{incident}/resolve', [ElectionDayController::class, 'incidentsResolve']);
             Route::post('/election-day/incidents/{incident}/escalate', [ElectionDayController::class, 'incidentsEscalate']);
             Route::delete('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsDestroy']);
+
+            // Result forms (Form 34A/B/C)
+            Route::get('/election-day/forms', [ElectionDayController::class, 'formsIndex']);
+            Route::post('/election-day/forms', [ElectionDayController::class, 'formsStore']);
+            Route::get('/election-day/forms/{resultForm}', [ElectionDayController::class, 'formsShow']);
+            Route::post('/election-day/forms/{resultForm}/verify', [ElectionDayController::class, 'formsVerify']);
+            Route::post('/election-day/forms/{resultForm}/dispute', [ElectionDayController::class, 'formsDispute']);
+            Route::delete('/election-day/forms/{resultForm}', [ElectionDayController::class, 'formsDestroy']);
+            Route::get('/election-day/forms/{resultForm}/compare', [ElectionDayController::class, 'formsCompare']);
 
             // --- Phase 1I: Reports & Analytics ---
 
