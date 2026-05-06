@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\MpesaWebhookController;
 use App\Http\Controllers\Api\V1\ElectionDayController;
 use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
+use App\Http\Controllers\Api\V1\MapController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -245,6 +246,9 @@ Route::prefix('v1')->group(function () {
             Route::put('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'update']);
             Route::delete('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'destroy']);
             Route::post('/agent-schedules/{agentSchedule}/check-in', [AgentScheduleController::class, 'checkIn']);
+
+            // Map data
+            Route::get('/map-data', [MapController::class, 'index']);
 
             // Surveys
             Route::get('/surveys', [SurveyController::class, 'index']);
