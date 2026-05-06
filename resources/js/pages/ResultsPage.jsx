@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 function formatNumber(n) {
@@ -68,6 +69,11 @@ export default function ResultsPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Election Results | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`Live election results for ${site?.candidate_name || 'the campaign'}.`} />
+            </Helmet>
+
             {/* Hero */}
             <section className="py-12" style={{ background: `linear-gradient(135deg, ${primaryColor}ee, ${site?.secondary_color || '#0f172a'}ee)` }}>
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">

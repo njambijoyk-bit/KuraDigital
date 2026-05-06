@@ -39,7 +39,10 @@ Route::get('/sites', [SiteController::class, 'index']);
 Route::get('/sites/{slug}', [SiteController::class, 'show']);
 Route::get('/sites/{siteId}/manifesto', [SiteController::class, 'manifesto']);
 Route::get('/sites/{siteId}/events', [SiteController::class, 'events']);
+Route::get('/sites/{siteId}/events/{eventId}', [SiteController::class, 'eventShow']);
+Route::post('/sites/{siteId}/events/{eventId}/rsvp', [SiteController::class, 'eventRsvp']);
 Route::get('/sites/{siteId}/news', [SiteController::class, 'news']);
+Route::get('/sites/{siteId}/news/{articleId}', [SiteController::class, 'newsShow']);
 Route::get('/sites/{siteId}/gallery', [SiteController::class, 'gallery']);
 Route::get('/sites/{siteId}/projects', [SiteController::class, 'projects']);
 Route::get('/sites/{siteId}/news/{articleId}', [SiteController::class, 'showNewsArticle']);
@@ -48,6 +51,7 @@ Route::post('/sites/{siteId}/events/{eventId}/rsvp', [SiteController::class, 'rs
 Route::post('/sites/{siteId}/newsletter', [SiteController::class, 'subscribeNewsletter']);
 Route::post('/sites/{siteId}/contact', [SiteController::class, 'storeContact']);
 Route::post('/sites/{siteId}/volunteers', [SiteController::class, 'storeVolunteer']);
+Route::post('/sites/{siteId}/subscribe', [SiteController::class, 'subscribe']);
 Route::post('/sites/{siteId}/register-supporter', [SiteController::class, 'registerSupporter']);
 Route::get('/sites/{siteId}/donations/stats', [SiteController::class, 'donationStats']);
 Route::post('/sites/{siteId}/donate', [SiteController::class, 'donate']);

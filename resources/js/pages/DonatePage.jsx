@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 const PRESET_AMOUNTS = [500, 1000, 2500, 5000, 10000, 25000];
@@ -125,6 +126,11 @@ export default function DonatePage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Donate | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`Support ${site?.candidate_name || 'the campaign'} with a donation.`} />
+            </Helmet>
+
             {/* Hero */}
             <section className="py-16" style={{ background: `linear-gradient(135deg, ${primaryColor}ee, ${site?.secondary_color || '#0f172a'}ee)` }}>
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 export default function SurveysPublicPage() {
@@ -32,6 +33,11 @@ export default function SurveysPublicPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>Surveys | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={`Community surveys from ${site?.candidate_name || 'the campaign'}.`} />
+            </Helmet>
+
             <section className="py-12" style={{ background: `linear-gradient(135deg, ${primaryColor}ee, ${site?.secondary_color || '#0f172a'}ee)` }}>
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
                     <h1 className="text-3xl md:text-4xl font-heading font-bold mb-2">Community Surveys</h1>

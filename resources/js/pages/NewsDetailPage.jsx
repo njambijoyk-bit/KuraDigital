@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 export default function NewsDetailPage() {
@@ -39,6 +40,15 @@ export default function NewsDetailPage() {
 
     return (
         <div>
+            <Helmet>
+                <title>{article.title} | {site?.candidate_name || 'Campaign'}</title>
+                <meta name="description" content={article.excerpt || article.body?.substring(0, 160) || ''} />
+                <meta property="og:title" content={article.title} />
+                <meta property="og:description" content={article.excerpt || ''} />
+                {article.image_url && <meta property="og:image" content={article.image_url} />}
+                <meta property="og:type" content="article" />
+            </Helmet>
+
             <section className="bg-dark-900 text-white py-16">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                     <Link to={`/${slug}/news`} className="text-sm text-gray-400 hover:text-white mb-4 inline-block">&larr; Back to News</Link>

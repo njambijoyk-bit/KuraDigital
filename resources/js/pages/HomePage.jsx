@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import useSiteStore from '../stores/useSiteStore';
 
 function PillarCard({ icon, title, description, color }) {
@@ -29,6 +30,15 @@ export default function HomePage() {
 
     return (
         <div>
+            <Helmet>
+                <title>{site?.candidate_name || 'Campaign'} | {site?.position || 'Campaign Site'}</title>
+                <meta name="description" content={site?.slogan || `Campaign site for ${site?.candidate_name}`} />
+                <meta property="og:title" content={site?.candidate_name || 'Campaign'} />
+                <meta property="og:description" content={site?.slogan || ''} />
+                {site?.portrait_url && <meta property="og:image" content={site.portrait_url} />}
+                <meta property="og:type" content="website" />
+            </Helmet>
+
             {/* Hero Section */}
             <section
                 className="relative min-h-[85vh] flex items-center"
