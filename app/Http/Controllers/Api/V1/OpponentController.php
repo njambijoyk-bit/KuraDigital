@@ -48,8 +48,25 @@ class OpponentController extends Controller
         }
 
         $opponents = $query->withCount('research')
+            ->withAvg('research as avg_sentiment_score', 'sentiment_score')
             ->orderByRaw("CASE WHEN threat_level = 'critical' THEN 1 WHEN threat_level = 'high' THEN 2 WHEN threat_level = 'medium' THEN 3 WHEN threat_level = 'low' THEN 4 ELSE 5 END")
             ->paginate(20);
+
+        // Derive a sentiment label from the average score for each opponent
+        $opponents->getCollection()->transform(function ($opponent) {
+            $score = $opponent->avg_sentiment_score;
+            if ($score === null) {
+                $opponent->sentiment_label = null;
+            } elseif ($score >= 0.3) {
+                $opponent->sentiment_label = 'positive';
+            } elseif ($score <= -0.3) {
+                $opponent->sentiment_label = 'negative';
+            } else {
+                $opponent->sentiment_label = 'neutral';
+            }
+            $opponent->avg_sentiment_score = $score !== null ? round((float) $score, 2) : null;
+            return $opponent;
+        });
 
         return response()->json($opponents);
     }
