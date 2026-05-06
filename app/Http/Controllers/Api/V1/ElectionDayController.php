@@ -10,6 +10,7 @@ use App\Models\PollingStation;
 use App\Models\ResultForm;
 use App\Models\TallyResult;
 use App\Services\AfricasTalkingSmsService;
+use App\Services\GoogleVisionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -158,6 +159,20 @@ class ElectionDayController extends Controller
         $station = PollingStation::where('campaign_id', $campaign->id)
             ->where('id', $validated['polling_station_id'])
             ->firstOrFail();
+
+        if ($station->assigned_agent_id && $station->assigned_agent_id !== $request->user()->id) {
+            $isAdmin = $campaign->members()
+                ->where('user_id', $request->user()->id)
+                ->whereIn('role', ['owner', 'admin'])
+                ->exists();
+
+            if (!$isAdmin) {
+                return response()->json([
+                    'message' => 'You are not the assigned agent for this polling station.',
+                    'assigned_agent_id' => $station->assigned_agent_id,
+                ], 403);
+            }
+        }
 
         $warnings = $this->detectTallyAnomalies($validated, $station, $campaign);
 
@@ -523,14 +538,44 @@ class ElectionDayController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        PollingStation::where('campaign_id', $campaign->id)
+        $station = PollingStation::where('campaign_id', $campaign->id)
             ->where('id', $validated['polling_station_id'])
             ->firstOrFail();
+
+        if ($station->assigned_agent_id && $station->assigned_agent_id !== $request->user()->id) {
+            $isAdmin = $campaign->members()
+                ->where('user_id', $request->user()->id)
+                ->whereIn('role', ['owner', 'admin'])
+                ->exists();
+
+            if (!$isAdmin) {
+                return response()->json([
+                    'message' => 'You are not the assigned agent for this polling station.',
+                    'assigned_agent_id' => $station->assigned_agent_id,
+                ], 403);
+            }
+        }
 
         $path = $request->file('image')->store(
             "campaigns/{$campaign->id}/result-forms",
             'public'
         );
+
+        $parsedResults = $validated['parsed_results']
+            ? json_decode($validated['parsed_results'], true)
+            : null;
+
+        $ocrResult = null;
+        $vision = app(GoogleVisionService::class);
+        try {
+            $ocrResult = $vision->analyze('public', $path);
+        } catch (\Throwable $e) {
+            Log::warning('Form 34 OCR failed', ['path' => $path, 'error' => $e->getMessage()]);
+        }
+
+        if (!$parsedResults && $ocrResult && $ocrResult['success'] && !empty($ocrResult['ocr_text'])) {
+            $parsedResults = $this->parseForm34OcrText($ocrResult['ocr_text'], $validated['form_type']);
+        }
 
         $form = ResultForm::create([
             'campaign_id' => $campaign->id,
@@ -538,11 +583,20 @@ class ElectionDayController extends Controller
             'uploaded_by' => $request->user()->id,
             'form_type' => $validated['form_type'],
             'image_path' => $path,
-            'parsed_results' => $validated['parsed_results'] ? json_decode($validated['parsed_results'], true) : null,
+            'parsed_results' => $parsedResults,
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        return response()->json($form->load(['pollingStation:id,name,code', 'uploader:id,name']), 201);
+        $response = $form->load(['pollingStation:id,name,code', 'uploader:id,name'])->toArray();
+        if ($ocrResult) {
+            $response['ocr'] = [
+                'success' => $ocrResult['success'],
+                'error' => $ocrResult['error'] ?? null,
+                'auto_parsed' => !empty($parsedResults) && !$validated['parsed_results'],
+            ];
+        }
+
+        return response()->json($response, 201);
     }
 
     public function formsShow(Request $request, Campaign $campaign, ResultForm $resultForm): JsonResponse
@@ -1011,5 +1065,67 @@ class ElectionDayController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    // =====================================================================
+    // Form 34 OCR Text Parser
+    // =====================================================================
+
+    private function parseForm34OcrText(string $ocrText, string $formType): ?array
+    {
+        $lines = preg_split('/\r?\n/', trim($ocrText));
+        $candidates = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) {
+                continue;
+            }
+
+            if (preg_match('/^(.+?)\s+(\d{1,3}(?:,\d{3})*)\s*$/', $line, $matches)) {
+                $name = trim($matches[1]);
+                $votes = (int) str_replace(',', '', $matches[2]);
+
+                if (strlen($name) >= 2 && $votes >= 0) {
+                    $candidates[] = [
+                        'candidate_name' => $name,
+                        'votes' => $votes,
+                    ];
+                }
+                continue;
+            }
+
+            if (preg_match('/^(.+?)\s*[-:|]\s*(\d{1,3}(?:,\d{3})*)\s*$/', $line, $matches)) {
+                $name = trim($matches[1]);
+                $votes = (int) str_replace(',', '', $matches[2]);
+
+                if (strlen($name) >= 2 && $votes >= 0) {
+                    $candidates[] = [
+                        'candidate_name' => $name,
+                        'votes' => $votes,
+                    ];
+                }
+            }
+        }
+
+        if (empty($candidates)) {
+            return null;
+        }
+
+        $totalVotes = array_sum(array_column($candidates, 'votes'));
+        $rejectedVotes = null;
+
+        if (preg_match('/rejected\s*(?:votes?)?\s*[-:|]?\s*(\d+)/i', $ocrText, $rejMatch)) {
+            $rejectedVotes = (int) $rejMatch[1];
+        }
+
+        return [
+            'form_type' => $formType,
+            'candidates' => $candidates,
+            'total_votes' => $totalVotes,
+            'rejected_votes' => $rejectedVotes,
+            'ocr_confidence' => 'low',
+            'requires_verification' => true,
+        ];
     }
 }
