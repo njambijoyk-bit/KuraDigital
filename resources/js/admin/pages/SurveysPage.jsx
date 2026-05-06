@@ -8,6 +8,9 @@ import {
     ClipboardDocumentListIcon,
     EyeIcon,
     PaperAirplaneIcon,
+    DocumentDuplicateIcon,
+    ArrowDownTrayIcon,
+    ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import PermissionGate from '../components/PermissionGate';
@@ -42,6 +45,9 @@ export default function SurveysPage() {
     const [showEdit, setShowEdit] = useState(null);
     const [showResponses, setShowResponses] = useState(null);
     const [responses, setResponses] = useState([]);
+    const [showResults, setShowResults] = useState(null);
+    const [resultsData, setResultsData] = useState(null);
+    const [resultsLoading, setResultsLoading] = useState(false);
     const [form, setForm] = useState({ ...emptyForm });
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -99,6 +105,38 @@ export default function SurveysPage() {
         } catch { /* handled */ }
     };
 
+    const handleDuplicate = async (id) => {
+        try {
+            await api.post(`/campaigns/${campaignId}/surveys/${id}/duplicate`);
+            fetchSurveys();
+        } catch { /* handled */ }
+    };
+
+    const handleExport = async (id) => {
+        try {
+            const response = await api.get(`/campaigns/${campaignId}/surveys/${id}/export`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `survey-${id}-responses.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch { /* handled */ }
+    };
+
+    const fetchResults = async (survey) => {
+        setShowResults(survey);
+        setResultsLoading(true);
+        setResultsData(null);
+        try {
+            const { data } = await api.get(`/campaigns/${campaignId}/surveys/${survey.id}/results`);
+            setResultsData(data);
+        } catch { /* handled */ }
+        setResultsLoading(false);
+    };
+
     const openEdit = (survey) => {
         setForm({
             title: survey.title || '',
@@ -154,14 +192,22 @@ export default function SurveysPage() {
         )},
         { key: 'created_at', label: 'Created', render: (r) => new Date(r.created_at).toLocaleDateString() },
         { key: 'actions', label: '', render: (r) => (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
                 <PermissionGate permission="field.view-reports">
-                    <button onClick={() => { fetchResponses(r.id); setShowResponses(r); }}
-                        className="text-gray-400 hover:text-primary-600"><EyeIcon className="h-4 w-4" /></button>
+                    <button onClick={() => fetchResults(r)} title="Results Dashboard"
+                        className="p-1 text-gray-400 hover:text-primary-600 rounded"><ChartBarIcon className="h-4 w-4" /></button>
+                    <button onClick={() => { fetchResponses(r.id); setShowResponses(r); }} title="View Responses"
+                        className="p-1 text-gray-400 hover:text-primary-600 rounded"><EyeIcon className="h-4 w-4" /></button>
+                    <button onClick={() => handleExport(r.id)} title="Export CSV"
+                        className="p-1 text-gray-400 hover:text-primary-600 rounded"><ArrowDownTrayIcon className="h-4 w-4" /></button>
                 </PermissionGate>
                 <PermissionGate permission="field.create-reports">
-                    <button onClick={() => openEdit(r)} className="text-gray-400 hover:text-primary-600"><PencilIcon className="h-4 w-4" /></button>
-                    <button onClick={() => handleDelete(r.id)} className="text-gray-400 hover:text-red-600"><TrashIcon className="h-4 w-4" /></button>
+                    <button onClick={() => handleDuplicate(r.id)} title="Duplicate"
+                        className="p-1 text-gray-400 hover:text-primary-600 rounded"><DocumentDuplicateIcon className="h-4 w-4" /></button>
+                    <button onClick={() => openEdit(r)} title="Edit"
+                        className="p-1 text-gray-400 hover:text-primary-600 rounded"><PencilIcon className="h-4 w-4" /></button>
+                    <button onClick={() => handleDelete(r.id)} title="Delete"
+                        className="p-1 text-gray-400 hover:text-red-600 rounded"><TrashIcon className="h-4 w-4" /></button>
                 </PermissionGate>
             </div>
         )},
@@ -336,7 +382,7 @@ export default function SurveysPage() {
                         {responses.map((r) => (
                             <div key={r.id} className="p-3 bg-gray-50 rounded-lg">
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="font-medium text-sm text-gray-900">{r.submitter?.name || 'Unknown'}</span>
+                                    <span className="font-medium text-sm text-gray-900">{r.submitter?.name || 'Anonymous'}</span>
                                     <span className="text-xs text-gray-500">{new Date(r.created_at).toLocaleString()}</span>
                                 </div>
                                 {r.ward && <div className="text-xs text-gray-500 mb-2">{r.ward}</div>}
@@ -351,6 +397,92 @@ export default function SurveysPage() {
                             </div>
                         ))}
                     </div>
+                )}
+            </Modal>
+
+            {/* Results Dashboard Modal */}
+            <Modal open={!!showResults} onClose={() => { setShowResults(null); setResultsData(null); }}
+                title={showResults ? `Results: ${showResults.title}` : 'Results'}>
+                {resultsLoading ? (
+                    <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                    </div>
+                ) : resultsData ? (
+                    <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+                        <div className="bg-primary-50 rounded-lg p-4 flex items-center justify-between">
+                            <span className="text-sm font-medium text-primary-900">Total Responses</span>
+                            <span className="text-2xl font-bold text-primary-700">{resultsData.total_responses}</span>
+                        </div>
+
+                        {resultsData.question_results?.map((qr) => (
+                            <div key={qr.id} className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-sm font-medium text-gray-900 mb-3">{qr.text}</h4>
+                                <p className="text-xs text-gray-500 mb-2">{qr.total_answers} answers &middot; {qr.type}</p>
+
+                                {qr.distribution && (
+                                    <div className="space-y-2">
+                                        {qr.distribution.map((d, i) => (
+                                            <div key={i}>
+                                                <div className="flex items-center justify-between text-sm mb-1">
+                                                    <span className="text-gray-700">{d.option}</span>
+                                                    <span className="text-gray-500">{d.count} ({d.percentage}%)</span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                                    <div className="bg-primary-500 h-2.5 rounded-full transition-all" style={{ width: `${d.percentage}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {qr.stats && (
+                                    <div className="grid grid-cols-4 gap-3 text-center">
+                                        <div className="bg-white rounded p-2">
+                                            <p className="text-xs text-gray-500">Min</p>
+                                            <p className="font-bold text-sm">{qr.stats.min ?? '-'}</p>
+                                        </div>
+                                        <div className="bg-white rounded p-2">
+                                            <p className="text-xs text-gray-500">Max</p>
+                                            <p className="font-bold text-sm">{qr.stats.max ?? '-'}</p>
+                                        </div>
+                                        <div className="bg-white rounded p-2">
+                                            <p className="text-xs text-gray-500">Average</p>
+                                            <p className="font-bold text-sm">{qr.stats.average ?? '-'}</p>
+                                        </div>
+                                        <div className="bg-white rounded p-2">
+                                            <p className="text-xs text-gray-500">Median</p>
+                                            <p className="font-bold text-sm">{qr.stats.median ?? '-'}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {qr.sample_answers && qr.sample_answers.length > 0 && (
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-gray-500">Sample answers:</p>
+                                        {qr.sample_answers.map((a, i) => (
+                                            <p key={i} className="text-sm text-gray-700 bg-white rounded p-2 italic">&ldquo;{a}&rdquo;</p>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {resultsData.geographic_breakdown && Object.keys(resultsData.geographic_breakdown).length > 0 && (
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-sm font-medium text-gray-900 mb-3">Responses by Ward</h4>
+                                <div className="space-y-2">
+                                    {Object.entries(resultsData.geographic_breakdown).map(([ward, count]) => (
+                                        <div key={ward} className="flex items-center justify-between text-sm">
+                                            <span className="text-gray-700">{ward || 'Not specified'}</span>
+                                            <span className="font-medium text-gray-900">{count}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-500 py-4">No results data available.</p>
                 )}
             </Modal>
         </div>

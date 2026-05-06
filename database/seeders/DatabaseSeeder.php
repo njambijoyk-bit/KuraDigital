@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             DemoSiteSeeder::class,
             ElectionDaySeeder::class,
+            SurveySeeder::class,
         ]);
     }
 }

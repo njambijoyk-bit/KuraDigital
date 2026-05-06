@@ -52,6 +52,9 @@ Route::post('/sites/{siteId}/register-supporter', [SiteController::class, 'regis
 Route::get('/sites/{siteId}/donations/stats', [SiteController::class, 'donationStats']);
 Route::post('/sites/{siteId}/donate', [SiteController::class, 'donate']);
 Route::get('/sites/{siteId}/election-results', [SiteController::class, 'electionResults']);
+Route::get('/sites/{siteId}/surveys', [SiteController::class, 'publicSurveys']);
+Route::get('/sites/{siteId}/surveys/{surveyId}', [SiteController::class, 'publicSurveyShow']);
+Route::post('/sites/{siteId}/surveys/{surveyId}/submit', [SiteController::class, 'publicSurveySubmit']);
 
 /*
 |--------------------------------------------------------------------------
@@ -235,6 +238,9 @@ Route::prefix('v1')->group(function () {
             Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy']);
             Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit']);
             Route::get('/surveys/{survey}/responses', [SurveyController::class, 'responses']);
+            Route::get('/surveys/{survey}/results', [SurveyController::class, 'results']);
+            Route::post('/surveys/{survey}/duplicate', [SurveyController::class, 'duplicate']);
+            Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportCsv']);
 
             // Check-ins
             Route::get('/check-ins', [CheckInController::class, 'index']);
