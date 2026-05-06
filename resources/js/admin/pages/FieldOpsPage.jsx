@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
     PlusIcon,
     PencilIcon,
@@ -10,6 +10,8 @@ import {
     ClockIcon,
     DocumentChartBarIcon,
     CheckCircleIcon,
+    CalendarDaysIcon,
+    ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import PermissionGate from '../components/PermissionGate';
@@ -18,6 +20,9 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import StatsCard from '../components/StatsCard';
+import ScheduleList from '../components/schedules/ScheduleList';
+import ScheduleCalendar from '../components/schedules/ScheduleCalendar';
+import CoverageView from '../components/schedules/CoverageView';
 
 const STATUSES = ['active', 'inactive', 'suspended'];
 
@@ -33,8 +38,17 @@ const statusColors = {
     suspended: 'bg-red-50 text-red-700',
 };
 
+const TABS = [
+    { id: 'agents', label: 'Agents', icon: UserIcon },
+    { id: 'schedules', label: 'Schedules', icon: CalendarDaysIcon },
+    { id: 'calendar', label: 'Calendar', icon: ClockIcon },
+    { id: 'coverage', label: 'Coverage', icon: ShieldCheckIcon },
+];
+
 export default function FieldOpsPage() {
     const { campaignId } = useParams();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'agents');
     const [items, setItems] = useState([]);
     const [meta, setMeta] = useState({});
     const [loading, setLoading] = useState(true);
@@ -49,7 +63,13 @@ export default function FieldOpsPage() {
     const [showCheckIns, setShowCheckIns] = useState(false);
     const [page, setPage] = useState(1);
     const [stats, setStats] = useState(null);
+    const [allAgents, setAllAgents] = useState([]);
     const { can } = useCampaignPermissions();
+
+    const switchTab = (tab) => {
+        setActiveTab(tab);
+        setSearchParams({ tab });
+    };
 
     const fetchAgents = useCallback(async (pg = page) => {
         setLoading(true);
@@ -64,6 +84,13 @@ export default function FieldOpsPage() {
         setLoading(false);
     }, [campaignId, search, statusFilter, page]);
 
+    const fetchAllAgents = useCallback(async () => {
+        try {
+            const { data } = await api.get(`/campaigns/${campaignId}/field-agents`, { params: { page: 1 } });
+            setAllAgents(data.data || []);
+        } catch { /* handled */ }
+    }, [campaignId]);
+
     const fetchCheckIns = useCallback(async () => {
         try {
             const { data } = await api.get(`/campaigns/${campaignId}/check-ins`);
@@ -73,24 +100,26 @@ export default function FieldOpsPage() {
 
     const fetchStats = useCallback(async () => {
         try {
-            const [agentsRes, checkInsRes, surveysRes] = await Promise.allSettled([
+            const [agentsRes, checkInsRes, surveysRes, schedulesRes] = await Promise.allSettled([
                 api.get(`/campaigns/${campaignId}/field-agents`, { params: { page: 1 } }),
                 api.get(`/campaigns/${campaignId}/check-ins`, { params: { page: 1 } }),
                 api.get(`/campaigns/${campaignId}/surveys`, { params: { page: 1 } }),
+                api.get(`/campaigns/${campaignId}/agent-schedules`, { params: { page: 1 } }),
             ]);
             const agentData = agentsRes.status === 'fulfilled' ? agentsRes.value.data : {};
-            const allAgents = agentData.data || [];
-            const activeAgents = allAgents.filter((a) => a.status === 'active').length;
+            const agents = agentData.data || [];
+            const activeAgents = agents.filter((a) => a.status === 'active').length;
             setStats({
-                totalAgents: agentData.meta?.total || agentData.total || allAgents.length,
+                totalAgents: agentData.meta?.total || agentData.total || agents.length,
                 activeAgents,
                 totalCheckIns: checkInsRes.status === 'fulfilled' ? (checkInsRes.value.data.meta?.total || checkInsRes.value.data.total || checkInsRes.value.data.data?.length || 0) : 0,
                 totalSurveys: surveysRes.status === 'fulfilled' ? (surveysRes.value.data.meta?.total || surveysRes.value.data.total || surveysRes.value.data.data?.length || 0) : 0,
+                totalSchedules: schedulesRes.status === 'fulfilled' ? (schedulesRes.value.data.meta?.total || schedulesRes.value.data.total || schedulesRes.value.data.data?.length || 0) : 0,
             });
         } catch { /* handled */ }
     }, [campaignId]);
 
-    useEffect(() => { fetchAgents(); fetchStats(); }, [fetchAgents, fetchStats]);
+    useEffect(() => { fetchAgents(); fetchStats(); fetchAllAgents(); }, [fetchAgents, fetchStats, fetchAllAgents]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -106,6 +135,7 @@ export default function FieldOpsPage() {
             }
             setForm({ ...emptyForm });
             fetchAgents();
+            fetchAllAgents();
         } catch (err) {
             setError(err.response?.data?.message || 'Something went wrong.');
         }
@@ -117,6 +147,7 @@ export default function FieldOpsPage() {
         try {
             await api.delete(`/campaigns/${campaignId}/field-agents/${id}`);
             fetchAgents();
+            fetchAllAgents();
         } catch { /* handled */ }
     };
 
@@ -236,68 +267,114 @@ export default function FieldOpsPage() {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-heading font-bold text-gray-900">Field Operations</h1>
                 <div className="flex items-center space-x-3">
-                    <PermissionGate permission="field.view">
-                        <button onClick={() => { fetchCheckIns(); setShowCheckIns(true); }}
-                            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            <ClockIcon className="h-4 w-4 mr-2" /> Check-ins
-                        </button>
-                    </PermissionGate>
-                    <PermissionGate permission="field.manage-agents">
-                        <button onClick={() => { setForm({ ...emptyForm }); setShowCreate(true); setError(null); }}
-                            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">
-                            <PlusIcon className="h-4 w-4 mr-2" /> Add Agent
-                        </button>
-                    </PermissionGate>
+                    {activeTab === 'agents' && (
+                        <>
+                            <PermissionGate permission="field.view">
+                                <button onClick={() => { fetchCheckIns(); setShowCheckIns(true); }}
+                                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                    <ClockIcon className="h-4 w-4 mr-2" /> Check-ins
+                                </button>
+                            </PermissionGate>
+                            <PermissionGate permission="field.manage-agents">
+                                <button onClick={() => { setForm({ ...emptyForm }); setShowCreate(true); setError(null); }}
+                                    className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">
+                                    <PlusIcon className="h-4 w-4 mr-2" /> Add Agent
+                                </button>
+                            </PermissionGate>
+                        </>
+                    )}
                 </div>
             </div>
 
             {/* Stats cards */}
             {stats && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatsCard title="Total Agents" value={stats.totalAgents} icon={UserIcon} color="primary" />
                     <StatsCard title="Active Agents" value={stats.activeAgents} icon={CheckCircleIcon} color="green" />
                     <StatsCard title="Check-ins" value={stats.totalCheckIns} icon={MapPinIcon} color="blue" />
                     <StatsCard title="Surveys" value={stats.totalSurveys} icon={DocumentChartBarIcon} color="purple" />
+                    <StatsCard title="Schedules" value={stats.totalSchedules} icon={CalendarDaysIcon} color="amber" />
                 </div>
             )}
 
-            <div className="flex items-center space-x-4">
-                <div className="relative flex-1 max-w-md">
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input type="text" placeholder="Search agents..." value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" />
-                </div>
-                <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                    className="border rounded-lg px-3 py-2 text-sm">
-                    <option value="">All Statuses</option>
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+            {/* Tabs */}
+            <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+                    {TABS.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => switchTab(tab.id)}
+                                className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                                    isActive
+                                        ? 'border-primary-600 text-primary-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <Icon className="h-4 w-4" />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </nav>
             </div>
 
-            {loading ? (
-                <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
-                </div>
-            ) : items.length === 0 ? (
-                <EmptyState icon={MapPinIcon} title="No field agents" description="Add field agents to start tracking field operations." />
-            ) : (
+            {/* Tab content */}
+            {activeTab === 'agents' && (
                 <>
-                    <DataTable columns={columns} data={items} />
-                    {meta.last_page > 1 && (
-                        <div className="flex justify-center space-x-2">
-                            {Array.from({ length: meta.last_page }, (_, i) => (
-                                <button key={i + 1} onClick={() => { setPage(i + 1); fetchAgents(i + 1); }}
-                                    className={`px-3 py-1 rounded text-sm ${page === i + 1 ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                                    {i + 1}
-                                </button>
-                            ))}
+                    <div className="flex items-center space-x-4">
+                        <div className="relative flex-1 max-w-md">
+                            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input type="text" placeholder="Search agents..." value={search}
+                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" />
                         </div>
+                        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                            className="border rounded-lg px-3 py-2 text-sm">
+                            <option value="">All Statuses</option>
+                            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
+
+                    {loading ? (
+                        <div className="flex justify-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                        </div>
+                    ) : items.length === 0 ? (
+                        <EmptyState icon={MapPinIcon} title="No field agents" description="Add field agents to start tracking field operations." />
+                    ) : (
+                        <>
+                            <DataTable columns={columns} data={items} />
+                            {meta.last_page > 1 && (
+                                <div className="flex justify-center space-x-2">
+                                    {Array.from({ length: meta.last_page }, (_, i) => (
+                                        <button key={i + 1} onClick={() => { setPage(i + 1); fetchAgents(i + 1); }}
+                                            className={`px-3 py-1 rounded text-sm ${page === i + 1 ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     )}
                 </>
             )}
 
-            {/* Create / Edit Modal */}
+            {activeTab === 'schedules' && (
+                <ScheduleList campaignId={campaignId} agents={allAgents} />
+            )}
+
+            {activeTab === 'calendar' && (
+                <ScheduleCalendar campaignId={campaignId} />
+            )}
+
+            {activeTab === 'coverage' && (
+                <CoverageView campaignId={campaignId} />
+            )}
+
+            {/* Create / Edit Agent Modal */}
             <Modal open={showCreate || !!showEdit} onClose={() => { setShowCreate(false); setShowEdit(null); }}
                 title={showEdit ? 'Edit Field Agent' : 'Add Field Agent'}>
                 <form onSubmit={handleSubmit} className="space-y-4">

@@ -120,6 +120,11 @@ class Campaign extends Model
         return $this->hasMany(FieldReport::class);
     }
 
+    public function agentSchedules(): HasMany
+    {
+        return $this->hasMany(AgentSchedule::class);
+    }
+
     public function ancestors(): array
     {
         $ancestors = [];
