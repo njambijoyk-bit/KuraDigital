@@ -16,3 +16,7 @@ use Illuminate\Support\Facades\Broadcast;
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
+
+// Election Day channels are public (no auth required) so external
+// results portals and war rooms can listen without authentication.
+// The channel name includes the campaign ID for scoping.

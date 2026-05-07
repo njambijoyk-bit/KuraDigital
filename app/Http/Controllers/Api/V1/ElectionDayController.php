@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\IncidentReported;
+use App\Events\TallyResultSubmitted;
+use App\Events\TallyResultVerified;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\FieldAgent;
@@ -180,8 +183,11 @@ class ElectionDayController extends Controller
         $validated['submitted_by'] = $request->user()->id;
 
         $result = TallyResult::create($validated);
+        $result->load(['pollingStation:id,name,code', 'submitter:id,name']);
 
-        $response = $result->load(['pollingStation:id,name,code', 'submitter:id,name'])->toArray();
+        event(new TallyResultSubmitted($result));
+
+        $response = $result->toArray();
         if (!empty($warnings)) {
             $response['warnings'] = $warnings;
         }
@@ -235,7 +241,10 @@ class ElectionDayController extends Controller
             'verified_at' => now(),
         ]);
 
-        return response()->json($tallyResult->fresh(['pollingStation:id,name,code', 'verifier:id,name']));
+        $tallyResult = $tallyResult->fresh(['pollingStation:id,name,code', 'verifier:id,name']);
+        event(new TallyResultVerified($tallyResult));
+
+        return response()->json($tallyResult);
     }
 
     public function talliesDispute(Request $request, Campaign $campaign, TallyResult $tallyResult): JsonResponse
@@ -421,8 +430,11 @@ class ElectionDayController extends Controller
         $validated['reported_by'] = $request->user()->id;
 
         $incident = Incident::create($validated);
+        $incident->load(['pollingStation:id,name,code', 'reporter:id,name']);
 
-        return response()->json($incident->load(['pollingStation:id,name,code', 'reporter:id,name']), 201);
+        event(new IncidentReported($incident));
+
+        return response()->json($incident, 201);
     }
 
     public function incidentsShow(Request $request, Campaign $campaign, Incident $incident): JsonResponse
@@ -1127,5 +1139,100 @@ class ElectionDayController extends Controller
             'ocr_confidence' => 'low',
             'requires_verification' => true,
         ];
+    }
+
+    // =====================================================================
+    // IEBC Polling Station Import (API)
+    // =====================================================================
+
+    public function importIebcStations(Request $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('create', [PollingStation::class, $campaign]);
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:51200'],
+            'skip_duplicates' => ['nullable', 'boolean'],
+        ]);
+
+        $skipDuplicates = $request->boolean('skip_duplicates', false);
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), 'r');
+        $header = fgetcsv($handle);
+
+        if (!$header) {
+            fclose($handle);
+            return response()->json(['message' => 'Empty CSV file.'], 422);
+        }
+
+        $header = array_map(fn ($h) => strtolower(trim($h)), $header);
+
+        if (!in_array('name', $header)) {
+            fclose($handle);
+            return response()->json([
+                'message' => "Required column 'name' not found.",
+                'available_columns' => $header,
+            ], 422);
+        }
+
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = 0;
+
+        while (($data = fgetcsv($handle)) !== false) {
+            if (count($data) !== count($header)) {
+                $errors++;
+                continue;
+            }
+
+            $record = array_combine($header, $data);
+            $name = trim($record['name'] ?? '');
+            $code = trim($record['code'] ?? '');
+
+            if (empty($name)) {
+                $errors++;
+                continue;
+            }
+
+            $stationData = [
+                'campaign_id' => $campaign->id,
+                'created_by' => $request->user()->id,
+                'name' => $name,
+                'code' => $code ?: null,
+                'ward' => trim($record['ward'] ?? '') ?: null,
+                'constituency' => trim($record['constituency'] ?? '') ?: null,
+                'county' => trim($record['county'] ?? '') ?: null,
+                'registered_voters' => (int) ($record['registered_voters'] ?? 0),
+                'latitude' => !empty($record['latitude']) ? (float) $record['latitude'] : null,
+                'longitude' => !empty($record['longitude']) ? (float) $record['longitude'] : null,
+                'status' => 'pending',
+            ];
+
+            $existing = $code
+                ? PollingStation::where('campaign_id', $campaign->id)->where('code', $code)->first()
+                : null;
+
+            if ($existing) {
+                if ($skipDuplicates) {
+                    $skipped++;
+                    continue;
+                }
+                $existing->update($stationData);
+                $updated++;
+            } else {
+                PollingStation::create($stationData);
+                $created++;
+            }
+        }
+
+        fclose($handle);
+
+        return response()->json([
+            'message' => 'IEBC station import complete.',
+            'created' => $created,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'errors' => $errors,
+        ]);
     }
 }

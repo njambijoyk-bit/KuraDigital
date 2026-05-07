@@ -417,7 +417,7 @@ class SiteController extends Controller
         $campaign = Campaign::where('site_id', $site->id)->first();
 
         if (!$campaign) {
-            return response()->json(['data' => ['candidates' => [], 'overview' => null, 'stations' => []]]);
+            return response()->json(['data' => ['candidates' => [], 'overview' => null, 'stations' => [], 'by_ward' => [], 'by_constituency' => []]]);
         }
 
         $results = $campaign->tallyResults()
@@ -445,6 +445,56 @@ class SiteController extends Controller
             ->select('id', 'name', 'code', 'ward', 'constituency', 'county', 'registered_voters', 'latitude', 'longitude', 'status')
             ->get();
 
+        $byWard = $results->filter(fn ($r) => $r->pollingStation?->ward)
+            ->groupBy(fn ($r) => $r->pollingStation->ward)
+            ->map(function ($wardResults, $ward) use ($campaign) {
+                $wardStations = $campaign->pollingStations()->where('ward', $ward);
+                $totalWardStations = $wardStations->count();
+                $reportedWardStations = $wardResults->pluck('polling_station_id')->unique()->count();
+                $registeredInWard = $wardStations->sum('registered_voters');
+                $castInWard = $wardResults->groupBy('polling_station_id')
+                    ->map(fn ($g) => $g->max('total_votes_cast'))->sum();
+
+                $candidates = $wardResults->groupBy('candidate_name')->map(fn ($g, $n) => [
+                    'candidate_name' => $n,
+                    'votes' => $g->sum('votes'),
+                ])->sortByDesc('votes')->values();
+
+                return [
+                    'ward' => $ward,
+                    'total_stations' => $totalWardStations,
+                    'reported_stations' => $reportedWardStations,
+                    'reporting_percentage' => $totalWardStations > 0 ? round(($reportedWardStations / $totalWardStations) * 100, 1) : 0,
+                    'registered_voters' => $registeredInWard,
+                    'votes_cast' => $castInWard,
+                    'turnout_percentage' => $registeredInWard > 0 ? round(($castInWard / $registeredInWard) * 100, 1) : 0,
+                    'candidates' => $candidates,
+                    'leading_candidate' => $candidates->first()['candidate_name'] ?? null,
+                ];
+            })->sortByDesc(fn ($w) => $w['votes_cast'])->values();
+
+        $byConstituency = $results->filter(fn ($r) => $r->pollingStation?->constituency)
+            ->groupBy(fn ($r) => $r->pollingStation->constituency)
+            ->map(function ($cResults, $constituency) use ($campaign) {
+                $cStations = $campaign->pollingStations()->where('constituency', $constituency);
+                $totalCStations = $cStations->count();
+                $reportedCStations = $cResults->pluck('polling_station_id')->unique()->count();
+
+                $candidates = $cResults->groupBy('candidate_name')->map(fn ($g, $n) => [
+                    'candidate_name' => $n,
+                    'votes' => $g->sum('votes'),
+                ])->sortByDesc('votes')->values();
+
+                return [
+                    'constituency' => $constituency,
+                    'total_stations' => $totalCStations,
+                    'reported_stations' => $reportedCStations,
+                    'reporting_percentage' => $totalCStations > 0 ? round(($reportedCStations / $totalCStations) * 100, 1) : 0,
+                    'candidates' => $candidates,
+                    'leading_candidate' => $candidates->first()['candidate_name'] ?? null,
+                ];
+            })->sortByDesc(fn ($c) => $c['reported_stations'])->values();
+
         return response()->json([
             'data' => [
                 'candidates' => $candidateTotals,
@@ -456,8 +506,21 @@ class SiteController extends Controller
                     'total_registered' => $totalRegistered,
                     'turnout_percentage' => $totalRegistered > 0 ? round(($totalVotesCast / $totalRegistered) * 100, 1) : 0,
                 ],
+                'by_ward' => $byWard,
+                'by_constituency' => $byConstituency,
                 'stations' => $stations,
                 'last_updated' => $results->max('updated_at'),
+                'campaign_id' => $campaign->id,
+                'site' => [
+                    'candidate_name' => $site->candidate_name,
+                    'position' => $site->position,
+                    'constituency' => $site->constituency,
+                    'county' => $site->county,
+                    'party' => $site->party,
+                    'primary_color' => $site->primary_color,
+                    'secondary_color' => $site->secondary_color,
+                    'logo_url' => $site->logo_url,
+                ],
             ],
         ]);
     }
