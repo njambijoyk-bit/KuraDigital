@@ -11,6 +11,7 @@ import {
     MapPinIcon,
     ArrowUpIcon,
     ArrowDownTrayIcon,
+    ArrowUpTrayIcon,
     UserGroupIcon,
     ChartBarIcon,
     ShieldExclamationIcon,
@@ -18,6 +19,7 @@ import {
 import api from '../../lib/api';
 import PermissionGate from '../components/PermissionGate';
 import useCampaignPermissions from '../hooks/useCampaignPermissions';
+import useElectionDayChannel from '../hooks/useElectionDayChannel';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -52,10 +54,37 @@ const severityColors = {
 export default function ElectionDayPage() {
     const { campaignId } = useParams();
     const [tab, setTab] = useState('summary');
+    const [liveEvent, setLiveEvent] = useState(null);
     const { can } = useCampaignPermissions();
+
+    useElectionDayChannel(campaignId, {
+        onTallySubmitted: (e) => {
+            setLiveEvent({ type: 'tally', message: `New tally: ${e.tallyData?.candidate_name} — ${e.tallyData?.votes} votes at ${e.tallyData?.station_name}` });
+            setTimeout(() => setLiveEvent(null), 5000);
+        },
+        onTallyVerified: (e) => {
+            setLiveEvent({ type: 'verified', message: `Tally verified: ${e.tallyData?.candidate_name} at ${e.tallyData?.station_name}` });
+            setTimeout(() => setLiveEvent(null), 5000);
+        },
+        onIncidentReported: (e) => {
+            setLiveEvent({ type: 'incident', message: `Incident: ${e.incidentData?.title} (${e.incidentData?.severity})` });
+            setTimeout(() => setLiveEvent(null), 8000);
+        },
+    });
 
     return (
         <div className="space-y-6">
+            {liveEvent && (
+                <div className={`rounded-lg p-3 flex items-center gap-2 text-sm font-medium animate-pulse ${
+                    liveEvent.type === 'incident' ? 'bg-red-50 text-red-800 border border-red-200' :
+                    liveEvent.type === 'verified' ? 'bg-green-50 text-green-800 border border-green-200' :
+                    'bg-blue-50 text-blue-800 border border-blue-200'
+                }`}>
+                    <span className="inline-block w-2 h-2 rounded-full bg-current animate-ping" />
+                    <span>LIVE:</span> {liveEvent.message}
+                </div>
+            )}
+
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-heading font-bold text-gray-900">Election Day</h1>
             </div>
@@ -234,6 +263,10 @@ function StationsTab({ campaignId }) {
     const [statusFilter, setStatusFilter] = useState('');
     const [showCreate, setShowCreate] = useState(false);
     const [showEdit, setShowEdit] = useState(null);
+    const [showImport, setShowImport] = useState(false);
+    const [importFile, setImportFile] = useState(null);
+    const [importResult, setImportResult] = useState(null);
+    const [importing, setImporting] = useState(false);
     const [form, setForm] = useState({ name: '', code: '', ward: '', constituency: '', county: '', registered_voters: '', notes: '' });
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -285,6 +318,26 @@ function StationsTab({ campaignId }) {
         } catch { /* handled */ }
     };
 
+    const handleImport = async (e) => {
+        e.preventDefault();
+        if (!importFile) return;
+        setImporting(true);
+        setImportResult(null);
+        setError(null);
+        try {
+            const fd = new FormData();
+            fd.append('file', importFile);
+            fd.append('skip_duplicates', '0');
+            const { data } = await api.post(`/campaigns/${campaignId}/election-day/stations/import-iebc`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setImportResult(data);
+            setImportFile(null);
+            fetch();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Import failed');
+        }
+        setImporting(false);
+    };
+
     const columns = [
         { key: 'name', label: 'Name' },
         { key: 'code', label: 'Code' },
@@ -320,9 +373,14 @@ function StationsTab({ campaignId }) {
                     </select>
                 </div>
                 <PermissionGate permission="eday.command-centre">
-                    <button onClick={() => { setShowCreate(true); setForm({ name: '', code: '', ward: '', constituency: '', county: '', registered_voters: '', notes: '' }); }} className="flex items-center space-x-1 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-primary-700">
-                        <PlusIcon className="h-4 w-4" /><span>Add Station</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setShowImport(true)} className="flex items-center space-x-1 border border-primary-600 text-primary-600 px-4 py-2 rounded-lg text-sm hover:bg-primary-50">
+                            <ArrowUpTrayIcon className="h-4 w-4" /><span>Import IEBC</span>
+                        </button>
+                        <button onClick={() => { setShowCreate(true); setForm({ name: '', code: '', ward: '', constituency: '', county: '', registered_voters: '', notes: '' }); }} className="flex items-center space-x-1 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-primary-700">
+                            <PlusIcon className="h-4 w-4" /><span>Add Station</span>
+                        </button>
+                    </div>
                 </PermissionGate>
             </div>
 
@@ -368,6 +426,47 @@ function StationsTab({ campaignId }) {
                         <button type="submit" disabled={submitting} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 disabled:opacity-50">{submitting ? 'Saving...' : 'Save'}</button>
                     </div>
                 </form>
+            </Modal>
+
+            <Modal isOpen={showImport} onClose={() => { setShowImport(false); setImportResult(null); setError(null); }} title="Import IEBC Polling Stations">
+                {importResult ? (
+                    <div className="space-y-4">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <p className="text-sm font-semibold text-green-800">Import Complete</p>
+                            <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-green-700">
+                                <span>Created: {importResult.created}</span>
+                                <span>Updated: {importResult.updated}</span>
+                                <span>Skipped: {importResult.skipped}</span>
+                                <span>Errors: {importResult.errors}</span>
+                            </div>
+                        </div>
+                        <div className="flex justify-end">
+                            <button onClick={() => { setShowImport(false); setImportResult(null); }} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm">Done</button>
+                        </div>
+                    </div>
+                ) : (
+                    <form onSubmit={handleImport} className="space-y-4">
+                        {error && <div className="text-red-600 text-sm">{error}</div>}
+                        <div>
+                            <p className="text-sm text-gray-600 mb-3">
+                                Upload a CSV file with IEBC polling station data. Required column: <code className="bg-gray-100 px-1 rounded">name</code>.
+                                Optional: <code className="bg-gray-100 px-1 rounded">code</code>, <code className="bg-gray-100 px-1 rounded">ward</code>, <code className="bg-gray-100 px-1 rounded">constituency</code>, <code className="bg-gray-100 px-1 rounded">county</code>, <code className="bg-gray-100 px-1 rounded">registered_voters</code>, <code className="bg-gray-100 px-1 rounded">latitude</code>, <code className="bg-gray-100 px-1 rounded">longitude</code>.
+                            </p>
+                            <input
+                                type="file"
+                                accept=".csv,.txt"
+                                onChange={(e) => setImportFile(e.target.files[0])}
+                                className="w-full border rounded-lg px-3 py-2 text-sm"
+                            />
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                            <button type="button" onClick={() => setShowImport(false)} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
+                            <button type="submit" disabled={importing || !importFile} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 disabled:opacity-50">
+                                {importing ? 'Importing...' : 'Import'}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </Modal>
         </div>
     );

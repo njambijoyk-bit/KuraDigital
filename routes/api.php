@@ -362,6 +362,7 @@ Route::prefix('v1')->group(function () {
             // Polling stations
             Route::get('/election-day/stations', [ElectionDayController::class, 'stationsIndex']);
             Route::post('/election-day/stations', [ElectionDayController::class, 'stationsStore']);
+            Route::post('/election-day/stations/import-iebc', [ElectionDayController::class, 'importIebcStations']);
             Route::get('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsShow']);
             Route::put('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsUpdate']);
             Route::delete('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsDestroy']);
