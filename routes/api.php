@@ -384,9 +384,10 @@ Route::prefix('v1')->group(function () {
             Route::post('/election-day/tallies/{tallyResult}/dispute', [ElectionDayController::class, 'talliesDispute']);
             Route::delete('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesDestroy']);
 
-            // Tally board + command centre
+            // Tally board + command centre + situation room
             Route::get('/election-day/tally-board', [ElectionDayController::class, 'tallyBoard']);
             Route::get('/election-day/command-centre', [ElectionDayController::class, 'commandCentre']);
+            Route::get('/election-day/situation-room', [ElectionDayController::class, 'situationRoom']);
 
             // Incidents
             Route::get('/election-day/incidents', [ElectionDayController::class, 'incidentsIndex']);

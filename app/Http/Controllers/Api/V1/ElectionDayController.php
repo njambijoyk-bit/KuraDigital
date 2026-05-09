@@ -7,6 +7,7 @@ use App\Events\TallyResultSubmitted;
 use App\Events\TallyResultVerified;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\ElectionDayActivity;
 use App\Models\FieldAgent;
 use App\Models\Incident;
 use App\Models\PollingStation;
@@ -928,6 +929,191 @@ class ElectionDayController extends Controller
             'deployed' => $deployed,
             'undeployed' => $undeployed,
             'unmanned_stations' => $unmanned,
+        ]);
+    }
+
+    // =====================================================================
+    // Situation Room (unified live dashboard)
+    // =====================================================================
+
+    public function situationRoom(Request $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('viewAny', [TallyResult::class, $campaign]);
+
+        // --- Tally Board ---
+        $tallies = $campaign->tallyResults()
+            ->with('pollingStation:id,name,code,ward,constituency,county,registered_voters')
+            ->get();
+
+        $candidateTotals = $tallies->groupBy('candidate_name')->map(function ($group, $name) {
+            return [
+                'candidate_name' => $name,
+                'party' => $group->first()->party,
+                'total_votes' => $group->sum('votes'),
+                'stations_reported' => $group->pluck('polling_station_id')->unique()->count(),
+                'verified_count' => $group->where('status', 'verified')->count(),
+            ];
+        })->sortByDesc('total_votes')->values();
+
+        $stations = $campaign->pollingStations()
+            ->withCount(['tallyResults', 'incidents'])
+            ->get();
+
+        $totalStations = $stations->count();
+        $reportedStations = $tallies->pluck('polling_station_id')->unique()->count();
+        $totalVotesCast = $tallies->groupBy('polling_station_id')
+            ->map(fn ($g) => $g->max('total_votes_cast'))
+            ->sum();
+        $totalRegistered = $stations->sum('registered_voters');
+
+        // --- Incidents ---
+        $unresolvedIncidents = $campaign->incidents()
+            ->whereNotIn('status', ['resolved'])
+            ->count();
+        $criticalIncidents = $campaign->incidents()
+            ->where('severity', 'critical')
+            ->where('status', '!=', 'resolved')
+            ->count();
+
+        $recentIncidents = $campaign->incidents()
+            ->with(['pollingStation:id,name,code', 'reporter:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->limit(30)
+            ->get()
+            ->map(fn ($i) => [
+                'id' => $i->id,
+                'title' => $i->title,
+                'category' => $i->category,
+                'severity' => $i->severity,
+                'status' => $i->status,
+                'ward' => $i->ward,
+                'station_name' => $i->pollingStation?->name,
+                'reported_by' => $i->reporter?->name,
+                'created_at' => $i->created_at?->toISOString(),
+            ]);
+
+        // --- Agents ---
+        $agents = $campaign->fieldAgents()->with('user:id,name')->get();
+        $totalAgents = $agents->count();
+        $activeAgents = $agents->where('status', 'active')->count();
+
+        $checkedInToday = $campaign->checkIns()
+            ->whereDate('created_at', now()->toDateString())
+            ->pluck('user_id')
+            ->unique();
+
+        $stationsWithoutAgents = $stations->whereNull('assigned_agent_id')->count();
+
+        // Agent locations (latest check-in per agent)
+        $agentLocations = $campaign->checkIns()
+            ->with('user:id,name')
+            ->whereIn('user_id', $agents->pluck('user_id'))
+            ->orderByDesc('created_at')
+            ->limit(200)
+            ->get()
+            ->unique('user_id')
+            ->map(fn ($c) => [
+                'user_id' => $c->user_id,
+                'name' => $c->user?->name,
+                'latitude' => $c->latitude,
+                'longitude' => $c->longitude,
+                'checked_in_at' => $c->created_at?->toISOString(),
+            ])
+            ->values();
+
+        // --- Station locations for map ---
+        $stationLocations = $stations
+            ->filter(fn ($s) => $s->latitude && $s->longitude)
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'code' => $s->code,
+                'status' => $s->status,
+                'ward' => $s->ward,
+                'latitude' => $s->latitude,
+                'longitude' => $s->longitude,
+                'has_tallies' => $s->tally_results_count > 0,
+                'has_incidents' => $s->incidents_count > 0,
+            ])
+            ->values();
+
+        // --- Incident locations for map ---
+        $incidentLocations = $campaign->incidents()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->where('status', '!=', 'resolved')
+            ->select('id', 'title', 'severity', 'category', 'latitude', 'longitude', 'created_at')
+            ->limit(100)
+            ->get();
+
+        // --- Activity stream ---
+        $activities = ElectionDayActivity::where('campaign_id', $campaign->id)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'type' => $a->type,
+                'severity' => $a->severity,
+                'message' => $a->message,
+                'metadata' => $a->metadata,
+                'time' => $a->created_at?->toISOString(),
+            ]);
+
+        // --- Turnout by ward ---
+        $turnoutByWard = $stations->groupBy('ward')->map(function ($wardStations) use ($tallies) {
+            $registered = $wardStations->sum('registered_voters');
+            $stationIds = $wardStations->pluck('id');
+            $cast = $tallies->whereIn('polling_station_id', $stationIds)
+                ->groupBy('polling_station_id')
+                ->map(fn ($g) => $g->max('total_votes_cast'))
+                ->sum();
+            return [
+                'ward' => $wardStations->first()->ward,
+                'stations' => $wardStations->count(),
+                'registered' => $registered,
+                'votes_cast' => $cast,
+                'turnout' => $registered > 0 ? round(($cast / $registered) * 100, 1) : 0,
+                'reported' => $wardStations->where('tally_results_count', '>', 0)->count(),
+            ];
+        })->sortByDesc('turnout')->values();
+
+        return response()->json([
+            'tally_board' => [
+                'candidates' => $candidateTotals,
+                'overview' => [
+                    'total_stations' => $totalStations,
+                    'reported_stations' => $reportedStations,
+                    'reporting_percentage' => $totalStations > 0 ? round(($reportedStations / $totalStations) * 100, 1) : 0,
+                    'total_votes_cast' => $totalVotesCast,
+                    'total_registered' => $totalRegistered,
+                    'turnout_percentage' => $totalRegistered > 0 ? round(($totalVotesCast / $totalRegistered) * 100, 1) : 0,
+                ],
+            ],
+            'incidents' => [
+                'unresolved' => $unresolvedIncidents,
+                'critical' => $criticalIncidents,
+                'recent' => $recentIncidents,
+            ],
+            'agents' => [
+                'total' => $totalAgents,
+                'active' => $activeAgents,
+                'checked_in' => $checkedInToday->count(),
+                'unmanned_stations' => $stationsWithoutAgents,
+                'locations' => $agentLocations,
+            ],
+            'map' => [
+                'stations' => $stationLocations,
+                'incidents' => $incidentLocations,
+            ],
+            'tallies' => [
+                'verified' => $tallies->where('status', 'verified')->count(),
+                'provisional' => $tallies->where('status', 'provisional')->count(),
+                'disputed' => $tallies->where('status', 'disputed')->count(),
+            ],
+            'turnout_by_ward' => $turnoutByWard,
+            'activity_stream' => $activities,
+            'generated_at' => now()->toISOString(),
         ]);
     }
 
