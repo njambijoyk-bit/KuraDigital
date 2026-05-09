@@ -368,7 +368,7 @@ function LiveMapQuadrant({ stations, agents, incidents }) {
                         a.latitude && a.longitude ? (
                             <Marker
                                 key={`ag-${a.user_id}`}
-                                position={[a.latitude, a.longitude]}
+                                position={[parseFloat(a.latitude), parseFloat(a.longitude)]}
                                 icon={createAgentIcon(a.checked_in_at)}
                             >
                                 <Popup>
