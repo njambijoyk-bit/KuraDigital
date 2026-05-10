@@ -54,7 +54,6 @@ return new class extends Migration
 
         Schema::table('mpesa_transactions', function (Blueprint $table) {
             $table->text('phone_number')->nullable()->change();
-            $table->text('receipt_number')->nullable()->change();
         });
     }
 
@@ -93,7 +92,6 @@ return new class extends Migration
 
         Schema::table('mpesa_transactions', function (Blueprint $table) {
             $table->string('phone_number')->nullable()->change();
-            $table->string('receipt_number')->nullable()->change();
         });
     }
 };
