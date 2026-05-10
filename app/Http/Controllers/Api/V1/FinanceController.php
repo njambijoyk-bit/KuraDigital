@@ -8,6 +8,8 @@ use App\Models\Campaign;
 use App\Models\Donation;
 use App\Models\Expense;
 use App\Models\MpesaTransaction;
+use App\Services\ComplianceService;
+use App\Services\FinanceAbacService;
 use App\Services\MpesaDarajaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -163,6 +165,18 @@ class FinanceController extends Controller
             'county' => ['nullable', 'string', 'max:255'],
         ]);
 
+        // ABAC: check if user can log expenses and spending cap
+        $abac = app(FinanceAbacService::class);
+        $canLog = $abac->canLogExpense($request->user(), $campaign);
+        if (!$canLog->allowed) {
+            return response()->json(['message' => $canLog->message, 'abac_status' => $canLog->status], 403);
+        }
+
+        $capCheck = $abac->checkSpendingCap($campaign, (float) $validated['amount']);
+        if (!$capCheck->allowed && $capCheck->status === 'denied') {
+            return response()->json(['message' => $capCheck->message, 'abac_status' => 'denied'], 403);
+        }
+
         if (isset($validated['budget_id'])) {
             $budget = Budget::find($validated['budget_id']);
             if ($budget && $budget->campaign_id !== $campaign->id) {
@@ -173,13 +187,20 @@ class FinanceController extends Controller
         $validated['campaign_id'] = $campaign->id;
         $validated['created_by'] = $request->user()->id;
 
+        // Attach compliance warnings if any
+        if ($capCheck->status === 'warning') {
+            $validated['compliance_flags'] = ['spending_cap_warning' => $capCheck->message];
+        }
+
         $expense = Expense::create($validated);
         $expense->load(['creator:id,name', 'budget:id,name']);
 
-        return response()->json([
-            'message' => 'Expense logged.',
-            'expense' => $expense,
-        ], 201);
+        $response = ['message' => 'Expense logged.', 'expense' => $expense];
+        if ($capCheck->status === 'warning') {
+            $response['abac_warning'] = $capCheck->message;
+        }
+
+        return response()->json($response, 201);
     }
 
     public function expensesShow(Request $request, Campaign $campaign, Expense $expense): JsonResponse
@@ -239,6 +260,17 @@ class FinanceController extends Controller
             return response()->json(['message' => 'Only pending expenses can be approved.'], 422);
         }
 
+        // ABAC: contextual approval checks
+        $abac = app(FinanceAbacService::class);
+        $result = $abac->canApproveExpense($request->user(), $expense, $campaign);
+        if (!$result->allowed) {
+            return response()->json([
+                'message' => $result->message,
+                'abac_status' => $result->status,
+                'required_role' => $result->requiredRole,
+            ], 403);
+        }
+
         $expense->update([
             'status' => 'approved',
             'approved_by' => $request->user()->id,
@@ -248,6 +280,9 @@ class FinanceController extends Controller
         if ($expense->budget_id) {
             $expense->budget->recalculateSpent();
         }
+
+        // Generate compliance alerts if needed
+        app(ComplianceService::class)->checkAndCreateAlerts($campaign);
 
         $expense->load(['creator:id,name', 'approver:id,name']);
 
@@ -371,9 +406,13 @@ class FinanceController extends Controller
             'donor_name' => ['nullable', 'string', 'max:255'],
             'donor_phone' => ['nullable', 'string', 'max:20'],
             'donor_email' => ['nullable', 'email', 'max:255'],
+            'donor_id_number' => ['nullable', 'string', 'max:255'],
+            'donor_occupation' => ['nullable', 'string', 'max:255'],
+            'donor_employer' => ['nullable', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:1'],
             'currency' => ['nullable', 'string', 'size:3'],
             'channel' => ['required', 'in:mpesa,bank_transfer,cash,online'],
+            'source_type' => ['nullable', 'in:individual,corporate,fundraiser,party'],
             'mpesa_receipt' => ['nullable', 'string', 'max:50'],
             'transaction_id' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
@@ -385,12 +424,35 @@ class FinanceController extends Controller
         $validated['status'] = 'completed';
         $validated['donated_at'] = $validated['donated_at'] ?? now();
 
-        $donation = Donation::create($validated);
+        $donation = new Donation($validated);
 
-        return response()->json([
-            'message' => 'Donation recorded.',
-            'donation' => $donation,
-        ], 201);
+        // ABAC: donation compliance checks
+        $abac = app(FinanceAbacService::class);
+        $result = $abac->canAcceptDonation($donation, $campaign);
+
+        if (!$result->allowed && $result->status === 'denied') {
+            return response()->json(['message' => $result->message, 'abac_status' => 'denied'], 403);
+        }
+
+        if ($result->status === 'disclosure_required') {
+            $donation->requires_disclosure = true;
+            $donation->compliance_flags = array_merge(
+                $donation->compliance_flags ?? [],
+                ['disclosure_required' => $result->message]
+            );
+        }
+
+        $donation->save();
+
+        $response = ['message' => 'Donation recorded.', 'donation' => $donation];
+        if ($result->status === 'warning' || $result->status === 'disclosure_required') {
+            $response['abac_warning'] = $result->message;
+        }
+
+        // Check compliance alerts after donation
+        app(ComplianceService::class)->checkAndCreateAlerts($campaign);
+
+        return response()->json($response, 201);
     }
 
     public function donationsShow(Request $request, Campaign $campaign, Donation $donation): JsonResponse

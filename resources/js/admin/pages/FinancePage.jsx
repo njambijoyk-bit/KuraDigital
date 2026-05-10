@@ -10,6 +10,8 @@ import {
     ArrowDownTrayIcon,
     BanknotesIcon,
     CurrencyDollarIcon,
+    ShieldCheckIcon,
+    ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../lib/api';
 import PermissionGate from '../components/PermissionGate';
@@ -17,6 +19,7 @@ import useCampaignPermissions from '../hooks/useCampaignPermissions';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
+import ComplianceDashboardPage from './ComplianceDashboardPage';
 
 const CATEGORIES = ['operations', 'media', 'events', 'field', 'personnel', 'logistics', 'other'];
 const PAYMENT_METHODS = ['cash', 'mpesa', 'bank_transfer', 'cheque'];
@@ -63,6 +66,7 @@ export default function FinancePage() {
                         { id: 'expenses', label: 'Expenses', perm: 'finance.view' },
                         { id: 'budgets', label: 'Budgets', perm: 'finance.view-budget' },
                         { id: 'donations', label: 'Donations', perm: 'finance.view-donations' },
+                        { id: 'compliance', label: 'Compliance', perm: 'compliance.view' },
                     ].filter((t) => can(t.perm)).map((t) => (
                         <button key={t.id} onClick={() => setTab(t.id)}
                             className={`py-3 px-1 border-b-2 text-sm font-medium ${tab === t.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -76,6 +80,7 @@ export default function FinancePage() {
             {tab === 'expenses' && <ExpensesTab campaignId={campaignId} />}
             {tab === 'budgets' && <BudgetsTab campaignId={campaignId} />}
             {tab === 'donations' && <DonationsTab campaignId={campaignId} />}
+            {tab === 'compliance' && <ComplianceDashboardPage />}
         </div>
     );
 }

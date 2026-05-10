@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
+use App\Traits\HasEncryptedFields;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Expense extends Model
 {
-    use Auditable;
+    use Auditable, HasEncryptedFields;
 
     protected $fillable = [
         'campaign_id',
@@ -30,13 +31,27 @@ class Expense extends Model
         'ward',
         'constituency',
         'county',
+        'receipt_media_id',
+        'compliance_flags',
+        'abac_override_by',
+        'abac_override_reason',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'expense_date' => 'date',
         'approved_at' => 'datetime',
+        'compliance_flags' => 'array',
+        'vendor' => 'encrypted',
+        'reference' => 'encrypted',
     ];
+
+    public function blindIndexFields(): array
+    {
+        return [
+            'vendor' => 'vendor_index',
+        ];
+    }
 
     public function campaign(): BelongsTo
     {
@@ -56,6 +71,11 @@ class Expense extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function overrider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'abac_override_by');
     }
 
     public function getAuditCampaignId(): int

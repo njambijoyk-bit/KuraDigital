@@ -32,6 +32,7 @@ use App\Models\TallyResult;
 use App\Models\Incident;
 use App\Models\Report;
 use App\Models\CanvassingAssignment;
+use App\Models\CampaignFinanceSetting;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CampaignMemberPolicy;
 use App\Policies\CampaignPolicy;
@@ -62,6 +63,7 @@ use App\Policies\TallyResultPolicy;
 use App\Policies\IncidentPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\FieldOperationsPolicy;
+use App\Policies\CompliancePolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -97,6 +99,7 @@ class AuthServiceProvider extends ServiceProvider
         TallyResult::class => TallyResultPolicy::class,
         Incident::class => IncidentPolicy::class,
         Report::class => ReportPolicy::class,
+        CampaignFinanceSetting::class => CompliancePolicy::class,
     ];
 
     public function boot(): void
