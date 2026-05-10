@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasEncryptedFields;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MpesaTransaction extends Model
 {
+    use HasEncryptedFields;
     protected $fillable = [
         'campaign_id',
         'donation_id',
@@ -25,7 +27,16 @@ class MpesaTransaction extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'raw_callback' => 'array',
+        'phone_number' => 'encrypted',
+        'receipt_number' => 'encrypted',
     ];
+
+    public function blindIndexFields(): array
+    {
+        return [
+            'phone_number' => 'phone_index',
+        ];
+    }
 
     public function campaign(): BelongsTo
     {

@@ -31,6 +31,8 @@ use App\Http\Controllers\Api\V1\UssdController;
 use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\MapController;
+use App\Http\Controllers\Api\V1\ComplianceController;
+use App\Http\Controllers\Api\V1\WebAuthnController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -91,6 +93,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/mfa/setup', [AuthController::class, 'setupMfa']);
         Route::post('/auth/mfa/confirm', [AuthController::class, 'confirmMfa']);
         Route::post('/auth/mfa/disable', [AuthController::class, 'disableMfa']);
+
+        // WebAuthn biometric registration & authentication
+        Route::get('/auth/webauthn/register/options', [WebAuthnController::class, 'registerOptions']);
+        Route::post('/auth/webauthn/register/verify', [WebAuthnController::class, 'registerVerify']);
+        Route::get('/auth/webauthn/authenticate/options', [WebAuthnController::class, 'authenticateOptions']);
+        Route::post('/auth/webauthn/authenticate/verify', [WebAuthnController::class, 'authenticateVerify']);
+        Route::get('/auth/webauthn/credentials', [WebAuthnController::class, 'listCredentials']);
+        Route::delete('/auth/webauthn/credentials/{id}', [WebAuthnController::class, 'deleteCredential']);
+        Route::put('/auth/webauthn/credentials/{id}', [WebAuthnController::class, 'renameCredential']);
 
         // Campaigns (list / create — no campaign context needed)
         Route::get('/campaigns', [CampaignController::class, 'index']);
@@ -352,6 +363,18 @@ Route::prefix('v1')->group(function () {
 
             // Finance summary
             Route::get('/finance/summary', [FinanceController::class, 'financeSummary']);
+
+            // --- Compliance & ABAC ---
+            Route::get('/compliance/dashboard', [ComplianceController::class, 'dashboard']);
+            Route::get('/compliance/alerts', [ComplianceController::class, 'alerts']);
+            Route::get('/compliance/alerts/count', [ComplianceController::class, 'alertCount']);
+            Route::post('/compliance/alerts/{alert}/resolve', [ComplianceController::class, 'resolveAlert']);
+            Route::get('/compliance/settings', [ComplianceController::class, 'settings']);
+            Route::put('/compliance/settings', [ComplianceController::class, 'updateSettings'])
+                ->middleware('biometric:high');
+            Route::get('/compliance/report/iebc', [ComplianceController::class, 'iebcReport']);
+            Route::get('/compliance/report/donors', [ComplianceController::class, 'donorReport'])
+                ->middleware('biometric:standard');
 
             // M-Pesa STK Push
             Route::post('/finance/mpesa/stk-push', [FinanceController::class, 'mpesaStkPush']);
