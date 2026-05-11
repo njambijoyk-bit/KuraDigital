@@ -170,6 +170,21 @@ class Campaign extends Model
         return $this->hasMany(MpesaTransaction::class);
     }
 
+    public function accounts(): HasMany
+    {
+        return $this->hasMany(Account::class);
+    }
+
+    public function funds(): HasMany
+    {
+        return $this->hasMany(Fund::class);
+    }
+
+    public function journalEntries(): HasMany
+    {
+        return $this->hasMany(JournalEntry::class);
+    }
+
     public function pollingStations(): HasMany
     {
         return $this->hasMany(PollingStation::class);

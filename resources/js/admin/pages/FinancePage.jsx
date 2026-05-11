@@ -20,6 +20,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import ComplianceDashboardPage from './ComplianceDashboardPage';
+import LedgerPage from './LedgerPage';
 
 const CATEGORIES = ['operations', 'media', 'events', 'field', 'personnel', 'logistics', 'other'];
 const PAYMENT_METHODS = ['cash', 'mpesa', 'bank_transfer', 'cheque'];
@@ -67,6 +68,7 @@ export default function FinancePage() {
                         { id: 'budgets', label: 'Budgets', perm: 'finance.view-budget' },
                         { id: 'donations', label: 'Donations', perm: 'finance.view-donations' },
                         { id: 'compliance', label: 'Compliance', perm: 'compliance.view' },
+                        { id: 'ledger', label: 'Ledger', perm: 'finance.view' },
                     ].filter((t) => can(t.perm)).map((t) => (
                         <button key={t.id} onClick={() => setTab(t.id)}
                             className={`py-3 px-1 border-b-2 text-sm font-medium ${tab === t.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -81,6 +83,7 @@ export default function FinancePage() {
             {tab === 'budgets' && <BudgetsTab campaignId={campaignId} />}
             {tab === 'donations' && <DonationsTab campaignId={campaignId} />}
             {tab === 'compliance' && <ComplianceDashboardPage />}
+            {tab === 'ledger' && <LedgerPage campaignId={campaignId} />}
         </div>
     );
 }

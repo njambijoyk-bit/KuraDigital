@@ -6,6 +6,10 @@ use App\Events\IncidentReported;
 use App\Events\TallyResultSubmitted;
 use App\Events\TallyResultVerified;
 use App\Listeners\RecordElectionDayActivity;
+use App\Models\Donation;
+use App\Models\Expense;
+use App\Observers\DonationObserver;
+use App\Observers\ExpenseObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -38,7 +42,8 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Expense::observe(ExpenseObserver::class);
+        Donation::observe(DonationObserver::class);
     }
 
     /**

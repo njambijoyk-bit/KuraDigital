@@ -92,6 +92,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'compliance.view', 'compliance.manage-settings', 'compliance.resolve-alerts',
             'compliance.generate-reports', 'compliance.override',
 
+            // Ledger
+            'ledger.view', 'ledger.manual-entry', 'ledger.reverse-entry',
+            'ledger.manage-funds', 'ledger.view-reports',
+
             // Field operations
             'field.view', 'field.manage-agents', 'field.view-agent-locations',
             'field.assign-stations', 'field.submit-survey', 'field.submit-checkin',
@@ -202,6 +206,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'finance.view-budget', 'finance.edit-budget', 'finance.view-donations', 'finance.export',
                 'compliance.view', 'compliance.manage-settings', 'compliance.resolve-alerts',
                 'compliance.generate-reports', 'compliance.override',
+                'ledger.view', 'ledger.manual-entry', 'ledger.reverse-entry',
+                'ledger.manage-funds', 'ledger.view-reports',
                 'reports.view', 'reports.create', 'reports.export',
                 'audit.view',
                 'team.view',
@@ -234,6 +240,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'legal-compliance-officer' => [
                 'finance.view', 'finance.view-budget', 'finance.view-donations', 'finance.export',
                 'compliance.view', 'compliance.resolve-alerts', 'compliance.generate-reports',
+                'ledger.view', 'ledger.view-reports',
                 'opponents.view-research',
                 'audit.view', 'audit.export',
                 'reports.view', 'reports.export',
@@ -290,6 +297,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'finance.view', 'finance.log-expense', 'finance.view-budget',
                 'finance.view-donations',
                 'compliance.view',
+                'ledger.view',
                 'media.view', 'media.upload',
             ],
 
@@ -340,6 +348,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'auditor' => [
                 'finance.view', 'finance.view-budget', 'finance.view-donations', 'finance.export',
                 'compliance.view', 'compliance.generate-reports',
+                'ledger.view', 'ledger.view-reports',
                 'audit.view', 'audit.export',
                 'reports.view', 'reports.export',
             ],
