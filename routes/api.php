@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\MapController;
 use App\Http\Controllers\Api\V1\ComplianceController;
+use App\Http\Controllers\Api\V1\LedgerController;
 use App\Http\Controllers\Api\V1\WebAuthnController;
 use Illuminate\Support\Facades\Route;
 
@@ -375,6 +376,22 @@ Route::prefix('v1')->group(function () {
             Route::get('/compliance/report/iebc', [ComplianceController::class, 'iebcReport']);
             Route::get('/compliance/report/donors', [ComplianceController::class, 'donorReport'])
                 ->middleware('biometric:standard');
+
+            // --- Double-Entry Ledger ---
+            Route::get('/ledger/chart-of-accounts', [LedgerController::class, 'chartOfAccounts']);
+            Route::get('/ledger/journal-entries', [LedgerController::class, 'journalEntries']);
+            Route::get('/ledger/journal-entries/{journalEntry}', [LedgerController::class, 'journalEntryShow']);
+            Route::post('/ledger/journal-entries', [LedgerController::class, 'manualEntry']);
+            Route::post('/ledger/journal-entries/{journalEntry}/reverse', [LedgerController::class, 'reverseEntry']);
+            Route::get('/ledger/trial-balance', [LedgerController::class, 'trialBalance']);
+            Route::get('/ledger/income-statement', [LedgerController::class, 'incomeStatement']);
+            Route::get('/ledger/balance-sheet', [LedgerController::class, 'balanceSheet']);
+            Route::get('/ledger/cash-flow', [LedgerController::class, 'cashFlow']);
+            Route::get('/ledger/budget-vs-actual', [LedgerController::class, 'budgetVsActual']);
+            Route::get('/ledger/integrity', [LedgerController::class, 'integrity']);
+            Route::get('/ledger/funds', [LedgerController::class, 'funds']);
+            Route::post('/ledger/funds', [LedgerController::class, 'createFund']);
+            Route::get('/ledger/funds/summary', [LedgerController::class, 'fundSummary']);
 
             // M-Pesa STK Push
             Route::post('/finance/mpesa/stk-push', [FinanceController::class, 'mpesaStkPush']);
