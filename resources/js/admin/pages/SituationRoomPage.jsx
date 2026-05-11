@@ -318,9 +318,9 @@ function TallyBoardQuadrant({ data }) {
 function LiveMapQuadrant({ stations, agents, incidents }) {
     const center = useMemo(() => {
         const allPoints = [
-            ...stations.map((s) => [s.latitude, s.longitude]),
-            ...agents.map((a) => [a.latitude, a.longitude]),
-        ].filter(([lat, lng]) => lat && lng);
+            ...stations.map((s) => [parseFloat(s.latitude), parseFloat(s.longitude)]),
+            ...agents.map((a) => [parseFloat(a.latitude), parseFloat(a.longitude)]),
+        ].filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
         if (allPoints.length === 0) return DEFAULT_CENTER;
         const avgLat = allPoints.reduce((s, p) => s + p[0], 0) / allPoints.length;
         const avgLng = allPoints.reduce((s, p) => s + p[1], 0) / allPoints.length;
@@ -345,10 +345,10 @@ function LiveMapQuadrant({ stations, agents, incidents }) {
                     {/* Stations */}
                     {stations.length > 0 && (
                         <MarkerClusterGroup chunkedLoading maxClusterRadius={30}>
-                            {stations.map((s) => (
+                            {stations.filter((s) => s.latitude && s.longitude).map((s) => (
                                 <Marker
                                     key={`st-${s.id}`}
-                                    position={[s.latitude, s.longitude]}
+                                    position={[parseFloat(s.latitude), parseFloat(s.longitude)]}
                                     icon={createStationIcon(s.status, s.has_incidents)}
                                 >
                                     <Popup>
@@ -368,7 +368,7 @@ function LiveMapQuadrant({ stations, agents, incidents }) {
                         a.latitude && a.longitude ? (
                             <Marker
                                 key={`ag-${a.user_id}`}
-                                position={[a.latitude, a.longitude]}
+                                position={[parseFloat(a.latitude), parseFloat(a.longitude)]}
                                 icon={createAgentIcon(a.checked_in_at)}
                             >
                                 <Popup>
@@ -384,10 +384,10 @@ function LiveMapQuadrant({ stations, agents, incidents }) {
                     ))}
 
                     {/* Incidents */}
-                    {incidents.map((inc) => (
+                    {incidents.filter((inc) => inc.latitude && inc.longitude).map((inc) => (
                         <Marker
                             key={`inc-${inc.id}`}
-                            position={[inc.latitude, inc.longitude]}
+                            position={[parseFloat(inc.latitude), parseFloat(inc.longitude)]}
                             icon={createIncidentIcon(inc.severity)}
                         >
                             <Popup>
