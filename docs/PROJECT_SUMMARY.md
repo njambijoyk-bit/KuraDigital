@@ -18,7 +18,7 @@ A white-label, multi-tenant campaign platform for Kenyan political candidates. I
 | Maps / realtime | Leaflet (+ heatmap, clustering), Laravel Echo / Pusher client |
 | Auth extras | TOTP MFA, WebAuthn (biometric) via `@simplewebauthn/browser` |
 | Offline / PWA | Service worker (`public/sw.js`), manifest, IndexedDB offline sync |
-| Database | **MySQL 8 today** (config default and `.env.example`). PostgreSQL 15 is a **planned** migration (`docs/TECH_DECISIONS.md`, Decision 4); not tested. SQLite does not work (a migration alters a column, which needs `doctrine/dbal`). |
+| Database | **MySQL 8 today** (config default and `.env.example`). PostgreSQL also works (migrations, seeders and tests verified on 16; planned as the main database in `docs/TECH_DECISIONS.md`, Decision 4). SQLite does not work (a migration alters a column, which needs `doctrine/dbal`). |
 | Integrations in code | Africa's Talking SMS/USSD, Twilio SMS (fallback), M-Pesa Daraja, Google Vision, OpenAI Whisper, Cloudflare R2 storage settings, Mailgun/log mail |
 
 ## Public site
@@ -54,13 +54,13 @@ Dashboard, Campaigns, Team, Site Settings, Manifesto, Events, News, Gallery, Pro
 
 ## Data
 
-52 migrations (all run cleanly on MariaDB 10.11 after the fix below). The seeder creates roles/permissions, a **demo site** (`demo-candidate`, "John Kamau, MP Starehe"), election-day sample data and surveys. **No admin user is seeded**, so the admin app needs a user created via register or tinker.
+55 migrations (all run cleanly on MariaDB 10.11 and PostgreSQL 16). The seeder creates roles/permissions, a **demo site** (`demo-candidate`, "John Kamau, MP Starehe"), election-day sample data and surveys. `LicensingSeeder` adds a platform admin (see `docs/LICENSING.md`) and a Demo Organisation with every module.
 
 ## Testing
 
-`php artisan test` (PHPUnit): 8 feature test files, 221 tests.
+`php artisan test` (PHPUnit): 9 feature test files, 258 tests (37 cover licensing).
 
-Last run (MariaDB, separate `kura_test` database): **215 passed, 6 failed.**
+Last run (MariaDB and PostgreSQL, separate test databases): **252 passed, 6 failed** on each.
 
 | Failing test | Area |
 |---|---|
@@ -86,6 +86,10 @@ php artisan migrate --seed
 npm run build            # or `npm run dev` for hot reload
 php artisan serve        # http://localhost:8000/demo-candidate
 ```
+
+## Licensing
+
+Features are sold as annual **modules** granted to an **organisation** that owns one or more workspaces (campaigns). Enforcement is server-side (`module:<key>` middleware on 224 routes across 10 modules, plus agent and workspace limits), with a platform-admin API for organisations, grants, renewals and revocations. Core features (auth, workspaces, team, media, audit log) are always available. Details: `docs/LICENSING.md`. The 5 sellable bundles (FieldOS, ImpactOS, SurveyField, CommandOS, CampaignOS) are plans in `config/licensing.php`.
 
 ## Known issues / notes
 

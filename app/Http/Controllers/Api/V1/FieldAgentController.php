@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\FieldAgent;
+use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -46,9 +47,20 @@ class FieldAgentController extends Controller
         return response()->json($agents);
     }
 
-    public function store(Request $request, Campaign $campaign): JsonResponse
+    public function store(Request $request, Campaign $campaign, LicenseService $license): JsonResponse
     {
         $this->authorize('create', [FieldAgent::class, $campaign]);
+
+        // Seats are shared across every workspace of the organisation.
+        // Inactive agents don't use a seat, so they can always be added.
+        if ($request->input('status') !== 'inactive' && !$license->bypasses($request->user())
+            && $license->agentLimitReached($campaign)) {
+            return response()->json([
+                'message' => 'Your licence field-agent limit has been reached. Deactivate an agent or ask to upgrade.',
+                'code' => 'agent_limit',
+                'limit' => $license->limit($campaign, 'field_ops', 'agents'),
+            ], 403);
+        }
 
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],

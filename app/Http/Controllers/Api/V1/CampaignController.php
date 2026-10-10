@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\Organisation;
+use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CampaignController extends Controller
@@ -31,7 +34,7 @@ class CampaignController extends Controller
         return response()->json($campaigns);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, LicenseService $license): JsonResponse
     {
         $this->authorize('create', Campaign::class);
 
@@ -39,6 +42,7 @@ class CampaignController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'unique:campaigns'],
             'parent_id' => ['nullable', 'exists:campaigns,id'],
+            'organisation_id' => ['nullable', 'exists:organisations,id'],
             'site_id' => ['nullable', 'exists:sites,id'],
             'level' => ['required', 'in:national,county,constituency,ward'],
             'election_type' => ['required', 'in:presidential,gubernatorial,senatorial,woman_rep,parliamentary,mca,other'],
@@ -51,14 +55,52 @@ class CampaignController extends Controller
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']) . '-' . Str::random(6);
 
-        $campaign = Campaign::create($validated);
+        $user = $request->user();
+        $isPlatformOwner = $user->hasRole('platform-owner');
 
-        // Add creator as campaign owner
-        $campaign->members()->create([
-            'user_id' => $request->user()->id,
-            'role' => 'campaign-owner',
-            'visibility_scope' => $validated['level'] === 'national' ? 'national' : 'own_campaign',
-        ]);
+        // Which organisation does the new workspace belong to?
+        // 1. an explicit organisation_id, 2. the parent workspace's organisation,
+        // 3. otherwise a brand-new organisation (no modules until a platform admin grants them).
+        $organisation = null;
+        if (!empty($validated['organisation_id'])) {
+            $organisation = Organisation::find($validated['organisation_id']);
+            if (!$isPlatformOwner && !$this->leadsOrganisation($user, $organisation)) {
+                return response()->json(['message' => 'You cannot create workspaces in that organisation.'], 403);
+            }
+        } elseif (!empty($validated['parent_id'])) {
+            $organisation = Campaign::find($validated['parent_id'])?->organisation;
+        }
+
+        if ($organisation && !$isPlatformOwner && $license->workspaceLimitReached($organisation)) {
+            return response()->json([
+                'message' => 'This organisation has reached its workspace limit.',
+                'code' => 'workspace_limit',
+            ], 403);
+        }
+
+        $campaign = DB::transaction(function () use ($validated, $organisation, $isPlatformOwner, $user) {
+            if (!$organisation && !$isPlatformOwner) {
+                $organisation = Organisation::create([
+                    'name' => $validated['name'],
+                    'slug' => Str::slug($validated['name']) . '-' . Str::lower(Str::random(6)),
+                    'contact_email' => $user->email,
+                    'status' => 'active',
+                ]);
+            }
+
+            $campaign = Campaign::create(array_merge($validated, [
+                'organisation_id' => $organisation?->id,
+            ]));
+
+            // Add creator as campaign owner
+            $campaign->members()->create([
+                'user_id' => $user->id,
+                'role' => 'campaign-owner',
+                'visibility_scope' => $validated['level'] === 'national' ? 'national' : 'own_campaign',
+            ]);
+
+            return $campaign;
+        });
 
         return response()->json([
             'message' => 'Campaign created.',
@@ -132,5 +174,14 @@ class CampaignController extends Controller
             ->get();
 
         return response()->json(['children' => $children]);
+    }
+
+    /** Leadership role in some workspace of the organisation. */
+    private function leadsOrganisation($user, Organisation $organisation): bool
+    {
+        return $user->activeMemberships()
+            ->whereIn('role', ['campaign-owner', 'campaign-director', 'deputy-campaign-director'])
+            ->whereIn('campaign_id', $organisation->campaigns()->pluck('id'))
+            ->exists();
     }
 }

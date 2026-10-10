@@ -164,7 +164,7 @@ The current codebase uses MySQL 8. The plan is to migrate to PostgreSQL 15 becau
 - **Full-text search** — search voter records, opponent research notes, and news articles without a separate search engine.
 - **Better analytics** — window functions, CTEs, and lateral joins for reporting dashboards.
 
-Laravel's Eloquent ORM supports PostgreSQL with zero code changes. The migration is a database swap, not a code rewrite.
+Laravel's Eloquent ORM and schema builder are portable, so this is mostly a database swap, not a rewrite. The exception is raw MySQL SQL in migrations: one (`ALTER TABLE ... MODIFY`) needed a PostgreSQL branch and has been fixed. All migrations, seeders and the test suite now run on PostgreSQL 16 and MariaDB 10.11; any new raw SQL should handle both.
 
 ---
 

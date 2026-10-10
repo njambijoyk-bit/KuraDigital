@@ -14,6 +14,7 @@ class Campaign extends Model
     use Auditable, HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'organisation_id',
         'parent_id',
         'site_id',
         'name',
@@ -34,6 +35,11 @@ class Campaign extends Model
         'settings' => 'array',
         'is_active' => 'boolean',
     ];
+
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class);
+    }
 
     public function parent(): BelongsTo
     {

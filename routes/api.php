@@ -30,6 +30,8 @@ use App\Http\Controllers\Api\V1\ElectionDayController;
 use App\Http\Controllers\Api\V1\UssdController;
 use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
+use App\Http\Controllers\Api\V1\LicenseController;
+use App\Http\Controllers\Api\V1\PlatformOrganisationController;
 use App\Http\Controllers\Api\V1\MapController;
 use App\Http\Controllers\Api\V1\ComplianceController;
 use App\Http\Controllers\Api\V1\LedgerController;
@@ -108,6 +110,20 @@ Route::prefix('v1')->group(function () {
         Route::get('/campaigns', [CampaignController::class, 'index']);
         Route::post('/campaigns', [CampaignController::class, 'store'])->middleware('throttle:campaign-create');
 
+        // Platform admin: organisations and module licences (role checks live in the controller)
+        Route::prefix('platform')->group(function () {
+            Route::get('/catalogue', [PlatformOrganisationController::class, 'catalogue']);
+            Route::get('/organisations', [PlatformOrganisationController::class, 'index']);
+            Route::post('/organisations', [PlatformOrganisationController::class, 'store']);
+            Route::get('/organisations/{organisation}', [PlatformOrganisationController::class, 'show']);
+            Route::put('/organisations/{organisation}', [PlatformOrganisationController::class, 'update']);
+            Route::post('/organisations/{organisation}/modules', [PlatformOrganisationController::class, 'grant']);
+            Route::post('/organisations/{organisation}/modules/{module}/renew', [PlatformOrganisationController::class, 'renew']);
+            Route::delete('/organisations/{organisation}/modules/{module}', [PlatformOrganisationController::class, 'revoke']);
+            Route::post('/organisations/{organisation}/campaigns', [PlatformOrganisationController::class, 'attachCampaign']);
+            Route::delete('/organisations/{organisation}/campaigns/{campaign}', [PlatformOrganisationController::class, 'detachCampaign']);
+        });
+
         // Campaign-scoped routes
         Route::middleware('campaign.access')->prefix('campaigns/{campaign}')->group(function () {
 
@@ -117,6 +133,9 @@ Route::prefix('v1')->group(function () {
             Route::delete('/', [CampaignController::class, 'destroy']);
             Route::get('/hierarchy', [CampaignController::class, 'hierarchy']);
             Route::get('/children', [CampaignController::class, 'children']);
+
+            // Licence: what this workspace's organisation has licensed (core)
+            Route::get('/license', [LicenseController::class, 'show']);
 
             // Team management
             Route::get('/members', [TeamController::class, 'members']);
@@ -139,329 +158,359 @@ Route::prefix('v1')->group(function () {
 
             // --- Phase 1B: Content Management ---
 
-            // Site settings
-            Route::get('/site', [SiteSettingsController::class, 'show']);
-            Route::post('/site', [SiteSettingsController::class, 'store']);
-            Route::put('/site', [SiteSettingsController::class, 'update']);
-            Route::delete('/site', [SiteSettingsController::class, 'destroy']);
+            Route::middleware('module:site')->group(function () {
+                // Site settings
+                Route::get('/site', [SiteSettingsController::class, 'show']);
+                Route::post('/site', [SiteSettingsController::class, 'store']);
+                Route::put('/site', [SiteSettingsController::class, 'update']);
+                Route::delete('/site', [SiteSettingsController::class, 'destroy']);
 
-            // Manifesto
-            Route::get('/manifesto', [ManifestoController::class, 'index']);
-            Route::post('/manifesto', [ManifestoController::class, 'store']);
-            Route::get('/manifesto/{pillar}', [ManifestoController::class, 'show']);
-            Route::put('/manifesto/{pillar}', [ManifestoController::class, 'update']);
-            Route::delete('/manifesto/{pillar}', [ManifestoController::class, 'destroy']);
+                // Manifesto
+                Route::get('/manifesto', [ManifestoController::class, 'index']);
+                Route::post('/manifesto', [ManifestoController::class, 'store']);
+                Route::get('/manifesto/{pillar}', [ManifestoController::class, 'show']);
+                Route::put('/manifesto/{pillar}', [ManifestoController::class, 'update']);
+                Route::delete('/manifesto/{pillar}', [ManifestoController::class, 'destroy']);
 
-            // Events
-            Route::get('/events', [EventController::class, 'index']);
-            Route::post('/events', [EventController::class, 'store']);
-            Route::get('/events/{event}', [EventController::class, 'show']);
-            Route::put('/events/{event}', [EventController::class, 'update']);
-            Route::delete('/events/{event}', [EventController::class, 'destroy']);
+                // Events
+                Route::get('/events', [EventController::class, 'index']);
+                Route::post('/events', [EventController::class, 'store']);
+                Route::get('/events/{event}', [EventController::class, 'show']);
+                Route::put('/events/{event}', [EventController::class, 'update']);
+                Route::delete('/events/{event}', [EventController::class, 'destroy']);
 
-            // News
-            Route::get('/news', [NewsController::class, 'index']);
-            Route::post('/news', [NewsController::class, 'store']);
-            Route::get('/news/{article}', [NewsController::class, 'show']);
-            Route::put('/news/{article}', [NewsController::class, 'update']);
-            Route::delete('/news/{article}', [NewsController::class, 'destroy']);
+                // News
+                Route::get('/news', [NewsController::class, 'index']);
+                Route::post('/news', [NewsController::class, 'store']);
+                Route::get('/news/{article}', [NewsController::class, 'show']);
+                Route::put('/news/{article}', [NewsController::class, 'update']);
+                Route::delete('/news/{article}', [NewsController::class, 'destroy']);
 
-            // Gallery
-            Route::get('/gallery', [GalleryController::class, 'index']);
-            Route::post('/gallery', [GalleryController::class, 'store']);
-            Route::get('/gallery/{item}', [GalleryController::class, 'show']);
-            Route::put('/gallery/{item}', [GalleryController::class, 'update']);
-            Route::delete('/gallery/{item}', [GalleryController::class, 'destroy']);
+                // Gallery
+                Route::get('/gallery', [GalleryController::class, 'index']);
+                Route::post('/gallery', [GalleryController::class, 'store']);
+                Route::get('/gallery/{item}', [GalleryController::class, 'show']);
+                Route::put('/gallery/{item}', [GalleryController::class, 'update']);
+                Route::delete('/gallery/{item}', [GalleryController::class, 'destroy']);
 
-            // Projects
-            Route::get('/projects', [ProjectController::class, 'index']);
-            Route::post('/projects', [ProjectController::class, 'store']);
-            Route::get('/projects/{project}', [ProjectController::class, 'show']);
-            Route::put('/projects/{project}', [ProjectController::class, 'update']);
-            Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
+                // Projects
+                Route::get('/projects', [ProjectController::class, 'index']);
+                Route::post('/projects', [ProjectController::class, 'store']);
+                Route::get('/projects/{project}', [ProjectController::class, 'show']);
+                Route::put('/projects/{project}', [ProjectController::class, 'update']);
+                Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
 
-            // Volunteers
-            Route::get('/volunteers', [VolunteerController::class, 'index']);
-            Route::get('/volunteers/export', [VolunteerController::class, 'export']);
-            Route::get('/volunteers/{volunteer}', [VolunteerController::class, 'show']);
-            Route::put('/volunteers/{volunteer}', [VolunteerController::class, 'update']);
-            Route::delete('/volunteers/{volunteer}', [VolunteerController::class, 'destroy']);
+                // Volunteers
+                Route::get('/volunteers', [VolunteerController::class, 'index']);
+                Route::get('/volunteers/export', [VolunteerController::class, 'export']);
+                Route::get('/volunteers/{volunteer}', [VolunteerController::class, 'show']);
+                Route::put('/volunteers/{volunteer}', [VolunteerController::class, 'update']);
+                Route::delete('/volunteers/{volunteer}', [VolunteerController::class, 'destroy']);
 
-            // Contact messages
-            Route::get('/contacts', [ContactMessageController::class, 'index']);
-            Route::get('/contacts/export', [ContactMessageController::class, 'export']);
-            Route::get('/contacts/{message}', [ContactMessageController::class, 'show']);
-            Route::put('/contacts/{message}', [ContactMessageController::class, 'update']);
-            Route::delete('/contacts/{message}', [ContactMessageController::class, 'destroy']);
+                // Contact messages
+                Route::get('/contacts', [ContactMessageController::class, 'index']);
+                Route::get('/contacts/export', [ContactMessageController::class, 'export']);
+                Route::get('/contacts/{message}', [ContactMessageController::class, 'show']);
+                Route::put('/contacts/{message}', [ContactMessageController::class, 'update']);
+                Route::delete('/contacts/{message}', [ContactMessageController::class, 'destroy']);
+            });
 
-            // Voters
-            Route::get('/voters', [VoterController::class, 'index']);
-            Route::post('/voters', [VoterController::class, 'store']);
-            Route::get('/voters/stats', [VoterController::class, 'stats']);
-            Route::get('/voters/export', [VoterController::class, 'export']);
-            Route::post('/voters/import', [VoterController::class, 'import']);
-            Route::post('/voters/bulk-tag', [VoterController::class, 'bulkTag']);
-            Route::post('/voters/bulk-status', [VoterController::class, 'bulkUpdateStatus']);
-            Route::get('/voters/{voter}', [VoterController::class, 'show']);
-            Route::put('/voters/{voter}', [VoterController::class, 'update']);
-            Route::delete('/voters/{voter}', [VoterController::class, 'destroy']);
+            Route::middleware('module:field_ops')->group(function () {
+                // Voters
+                Route::get('/voters', [VoterController::class, 'index']);
+                Route::post('/voters', [VoterController::class, 'store']);
+                Route::get('/voters/stats', [VoterController::class, 'stats']);
+                Route::get('/voters/export', [VoterController::class, 'export']);
+                Route::post('/voters/import', [VoterController::class, 'import']);
+                Route::post('/voters/bulk-tag', [VoterController::class, 'bulkTag']);
+                Route::post('/voters/bulk-status', [VoterController::class, 'bulkUpdateStatus']);
+                Route::get('/voters/{voter}', [VoterController::class, 'show']);
+                Route::put('/voters/{voter}', [VoterController::class, 'update']);
+                Route::delete('/voters/{voter}', [VoterController::class, 'destroy']);
 
-            // Field Operations — Canvassing Assignments
-            Route::get('/field/assignments', [FieldOperationsController::class, 'assignments']);
-            Route::post('/field/assignments', [FieldOperationsController::class, 'storeAssignment']);
-            Route::get('/field/assignments/{assignment}', [FieldOperationsController::class, 'showAssignment']);
-            Route::put('/field/assignments/{assignment}', [FieldOperationsController::class, 'updateAssignment']);
-            Route::delete('/field/assignments/{assignment}', [FieldOperationsController::class, 'destroyAssignment']);
+                // Field Operations — Canvassing Assignments
+                Route::get('/field/assignments', [FieldOperationsController::class, 'assignments']);
+                Route::post('/field/assignments', [FieldOperationsController::class, 'storeAssignment']);
+                Route::get('/field/assignments/{assignment}', [FieldOperationsController::class, 'showAssignment']);
+                Route::put('/field/assignments/{assignment}', [FieldOperationsController::class, 'updateAssignment']);
+                Route::delete('/field/assignments/{assignment}', [FieldOperationsController::class, 'destroyAssignment']);
 
-            // Field Operations — Voter Interactions
-            Route::get('/field/interactions', [FieldOperationsController::class, 'interactions']);
-            Route::post('/field/interactions', [FieldOperationsController::class, 'storeInteraction']);
-            Route::get('/field/interactions/{interaction}', [FieldOperationsController::class, 'showInteraction']);
+                // Field Operations — Voter Interactions
+                Route::get('/field/interactions', [FieldOperationsController::class, 'interactions']);
+                Route::post('/field/interactions', [FieldOperationsController::class, 'storeInteraction']);
+                Route::get('/field/interactions/{interaction}', [FieldOperationsController::class, 'showInteraction']);
 
-            // Field Operations — Agent Check-ins
-            Route::get('/field/check-ins', [FieldOperationsController::class, 'checkIns']);
-            Route::post('/field/check-ins', [FieldOperationsController::class, 'storeCheckIn']);
+                // Field Operations — Agent Check-ins
+                Route::get('/field/check-ins', [FieldOperationsController::class, 'checkIns']);
+                Route::post('/field/check-ins', [FieldOperationsController::class, 'storeCheckIn']);
 
-            // Field Operations — Stats
-            Route::get('/field/stats', [FieldOperationsController::class, 'stats']);
+                // Field Operations — Stats
+                Route::get('/field/stats', [FieldOperationsController::class, 'stats']);
+            });
 
-            // Opponents
-            Route::get('/opponents', [OpponentController::class, 'index']);
-            Route::post('/opponents', [OpponentController::class, 'store']);
-            Route::get('/opponents/{opponent}', [OpponentController::class, 'show']);
-            Route::put('/opponents/{opponent}', [OpponentController::class, 'update']);
-            Route::delete('/opponents/{opponent}', [OpponentController::class, 'destroy']);
+            Route::middleware('module:intelligence')->group(function () {
+                // Opponents
+                Route::get('/opponents', [OpponentController::class, 'index']);
+                Route::post('/opponents', [OpponentController::class, 'store']);
+                Route::get('/opponents/{opponent}', [OpponentController::class, 'show']);
+                Route::put('/opponents/{opponent}', [OpponentController::class, 'update']);
+                Route::delete('/opponents/{opponent}', [OpponentController::class, 'destroy']);
 
-            // Opponent research
-            Route::get('/opponents/{opponent}/research', [OpponentController::class, 'researchIndex']);
-            Route::post('/opponents/{opponent}/research', [OpponentController::class, 'researchStore']);
-            Route::put('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchUpdate']);
-            Route::delete('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchDestroy']);
-            Route::post('/opponents/{opponent}/research/{research}/reanalyze', [OpponentController::class, 'researchReanalyze']);
+                // Opponent research
+                Route::get('/opponents/{opponent}/research', [OpponentController::class, 'researchIndex']);
+                Route::post('/opponents/{opponent}/research', [OpponentController::class, 'researchStore']);
+                Route::put('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchUpdate']);
+                Route::delete('/opponents/{opponent}/research/{research}', [OpponentController::class, 'researchDestroy']);
+                Route::post('/opponents/{opponent}/research/{research}/reanalyze', [OpponentController::class, 'researchReanalyze']);
 
-            // Opponent sentiment analysis
-            Route::get('/opponents/{opponent}/sentiment', [OpponentController::class, 'sentimentSummary']);
-            Route::post('/opponents/{opponent}/sentiment/reanalyze-all', [OpponentController::class, 'bulkReanalyze']);
+                // Opponent sentiment analysis
+                Route::get('/opponents/{opponent}/sentiment', [OpponentController::class, 'sentimentSummary']);
+                Route::post('/opponents/{opponent}/sentiment/reanalyze-all', [OpponentController::class, 'bulkReanalyze']);
+            });
 
             // --- Phase 1D: Field Operations ---
 
-            // Field agents
-            Route::get('/field-agents', [FieldAgentController::class, 'index']);
-            Route::post('/field-agents', [FieldAgentController::class, 'store']);
-            Route::get('/field-agents/locations', [FieldAgentController::class, 'locations']);
-            Route::get('/field-agents/{fieldAgent}', [FieldAgentController::class, 'show']);
-            Route::put('/field-agents/{fieldAgent}', [FieldAgentController::class, 'update']);
-            Route::delete('/field-agents/{fieldAgent}', [FieldAgentController::class, 'destroy']);
-            Route::post('/field-agents/{fieldAgent}/assign-station', [FieldAgentController::class, 'assignStation']);
+            Route::middleware('module:field_ops')->group(function () {
+                // Field agents
+                Route::get('/field-agents', [FieldAgentController::class, 'index']);
+                Route::post('/field-agents', [FieldAgentController::class, 'store']);
+                Route::get('/field-agents/locations', [FieldAgentController::class, 'locations']);
+                Route::get('/field-agents/{fieldAgent}', [FieldAgentController::class, 'show']);
+                Route::put('/field-agents/{fieldAgent}', [FieldAgentController::class, 'update']);
+                Route::delete('/field-agents/{fieldAgent}', [FieldAgentController::class, 'destroy']);
+                Route::post('/field-agents/{fieldAgent}/assign-station', [FieldAgentController::class, 'assignStation']);
 
-            // Agent schedules
-            Route::get('/agent-schedules', [AgentScheduleController::class, 'index']);
-            Route::post('/agent-schedules', [AgentScheduleController::class, 'store']);
-            Route::post('/agent-schedules/bulk', [AgentScheduleController::class, 'bulk']);
-            Route::get('/agent-schedules/calendar', [AgentScheduleController::class, 'calendar']);
-            Route::get('/agent-schedules/coverage', [AgentScheduleController::class, 'coverage']);
-            Route::get('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'show']);
-            Route::put('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'update']);
-            Route::delete('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'destroy']);
-            Route::post('/agent-schedules/{agentSchedule}/check-in', [AgentScheduleController::class, 'checkIn']);
+                // Agent schedules
+                Route::get('/agent-schedules', [AgentScheduleController::class, 'index']);
+                Route::post('/agent-schedules', [AgentScheduleController::class, 'store']);
+                Route::post('/agent-schedules/bulk', [AgentScheduleController::class, 'bulk']);
+                Route::get('/agent-schedules/calendar', [AgentScheduleController::class, 'calendar']);
+                Route::get('/agent-schedules/coverage', [AgentScheduleController::class, 'coverage']);
+                Route::get('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'show']);
+                Route::put('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'update']);
+                Route::delete('/agent-schedules/{agentSchedule}', [AgentScheduleController::class, 'destroy']);
+                Route::post('/agent-schedules/{agentSchedule}/check-in', [AgentScheduleController::class, 'checkIn']);
 
-            // Map data
-            Route::get('/map-data', [MapController::class, 'index']);
+                // Map data
+                Route::get('/map-data', [MapController::class, 'index']);
+            });
 
-            // Surveys
-            Route::get('/surveys', [SurveyController::class, 'index']);
-            Route::post('/surveys', [SurveyController::class, 'store']);
-            Route::get('/surveys/{survey}', [SurveyController::class, 'show']);
-            Route::put('/surveys/{survey}', [SurveyController::class, 'update']);
-            Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy']);
-            Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit']);
-            Route::get('/surveys/{survey}/responses', [SurveyController::class, 'responses']);
-            Route::get('/surveys/{survey}/results', [SurveyController::class, 'results']);
-            Route::post('/surveys/{survey}/duplicate', [SurveyController::class, 'duplicate']);
-            Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportCsv']);
+            Route::middleware('module:surveys')->group(function () {
+                // Surveys
+                Route::get('/surveys', [SurveyController::class, 'index']);
+                Route::post('/surveys', [SurveyController::class, 'store']);
+                Route::get('/surveys/{survey}', [SurveyController::class, 'show']);
+                Route::put('/surveys/{survey}', [SurveyController::class, 'update']);
+                Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy']);
+                Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit']);
+                Route::get('/surveys/{survey}/responses', [SurveyController::class, 'responses']);
+                Route::get('/surveys/{survey}/results', [SurveyController::class, 'results']);
+                Route::post('/surveys/{survey}/duplicate', [SurveyController::class, 'duplicate']);
+                Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportCsv']);
+            });
 
-            // Check-ins
-            Route::get('/check-ins', [CheckInController::class, 'index']);
-            Route::post('/check-ins', [CheckInController::class, 'store']);
+            Route::middleware('module:field_ops')->group(function () {
+                // Check-ins
+                Route::get('/check-ins', [CheckInController::class, 'index']);
+                Route::post('/check-ins', [CheckInController::class, 'store']);
+            });
 
-            // Field reports
-            Route::get('/field-reports', [FieldReportController::class, 'index']);
-            Route::post('/field-reports', [FieldReportController::class, 'store']);
-            Route::get('/field-reports/stats', [FieldReportController::class, 'stats']);
-            Route::post('/field-reports/sync', [FieldReportController::class, 'sync']);
-            Route::get('/field-reports/{fieldReport}', [FieldReportController::class, 'show']);
-            Route::put('/field-reports/{fieldReport}', [FieldReportController::class, 'update']);
-            Route::post('/field-reports/{fieldReport}/reprocess', [FieldReportController::class, 'reprocess']);
-            Route::delete('/field-reports/{fieldReport}', [FieldReportController::class, 'destroy']);
+            Route::middleware('module:field_reports')->group(function () {
+                // Field reports
+                Route::get('/field-reports', [FieldReportController::class, 'index']);
+                Route::post('/field-reports', [FieldReportController::class, 'store']);
+                Route::get('/field-reports/stats', [FieldReportController::class, 'stats']);
+                Route::post('/field-reports/sync', [FieldReportController::class, 'sync']);
+                Route::get('/field-reports/{fieldReport}', [FieldReportController::class, 'show']);
+                Route::put('/field-reports/{fieldReport}', [FieldReportController::class, 'update']);
+                Route::post('/field-reports/{fieldReport}/reprocess', [FieldReportController::class, 'reprocess']);
+                Route::delete('/field-reports/{fieldReport}', [FieldReportController::class, 'destroy']);
+            });
 
             // --- Phase 1E: Strategy ---
 
-            // Strategy notes
-            Route::get('/strategy/notes', [StrategyController::class, 'notesIndex']);
-            Route::post('/strategy/notes', [StrategyController::class, 'notesStore']);
-            Route::get('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesShow']);
-            Route::put('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesUpdate']);
-            Route::delete('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesDestroy']);
+            Route::middleware('module:intelligence')->group(function () {
+                // Strategy notes
+                Route::get('/strategy/notes', [StrategyController::class, 'notesIndex']);
+                Route::post('/strategy/notes', [StrategyController::class, 'notesStore']);
+                Route::get('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesShow']);
+                Route::put('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesUpdate']);
+                Route::delete('/strategy/notes/{strategyNote}', [StrategyController::class, 'notesDestroy']);
 
-            // Ward targets
-            Route::get('/strategy/ward-targets', [StrategyController::class, 'wardTargetsIndex']);
-            Route::post('/strategy/ward-targets', [StrategyController::class, 'wardTargetsStore']);
-            Route::put('/strategy/ward-targets/{wardTarget}', [StrategyController::class, 'wardTargetsUpdate']);
-            Route::delete('/strategy/ward-targets/{wardTarget}', [StrategyController::class, 'wardTargetsDestroy']);
+                // Ward targets
+                Route::get('/strategy/ward-targets', [StrategyController::class, 'wardTargetsIndex']);
+                Route::post('/strategy/ward-targets', [StrategyController::class, 'wardTargetsStore']);
+                Route::put('/strategy/ward-targets/{wardTarget}', [StrategyController::class, 'wardTargetsUpdate']);
+                Route::delete('/strategy/ward-targets/{wardTarget}', [StrategyController::class, 'wardTargetsDestroy']);
+            });
 
-            // Polls
-            Route::get('/strategy/polls', [StrategyController::class, 'pollsIndex']);
-            Route::post('/strategy/polls', [StrategyController::class, 'pollsStore']);
-            Route::get('/strategy/polls/{poll}', [StrategyController::class, 'pollsShow']);
-            Route::delete('/strategy/polls/{poll}', [StrategyController::class, 'pollsDestroy']);
+            Route::middleware('module:surveys')->group(function () {
+                // Polls
+                Route::get('/strategy/polls', [StrategyController::class, 'pollsIndex']);
+                Route::post('/strategy/polls', [StrategyController::class, 'pollsStore']);
+                Route::get('/strategy/polls/{poll}', [StrategyController::class, 'pollsShow']);
+                Route::delete('/strategy/polls/{poll}', [StrategyController::class, 'pollsDestroy']);
+            });
 
             // --- Phase 1F: Messaging ---
 
-            // Message templates
-            Route::get('/messaging/templates', [MessagingController::class, 'templatesIndex']);
-            Route::post('/messaging/templates', [MessagingController::class, 'templatesStore']);
-            Route::get('/messaging/templates/{template}', [MessagingController::class, 'templatesShow']);
-            Route::put('/messaging/templates/{template}', [MessagingController::class, 'templatesUpdate']);
-            Route::delete('/messaging/templates/{template}', [MessagingController::class, 'templatesDestroy']);
-            Route::post('/messaging/templates/{template}/approve', [MessagingController::class, 'templatesApprove']);
+            Route::middleware('module:messaging')->group(function () {
+                // Message templates
+                Route::get('/messaging/templates', [MessagingController::class, 'templatesIndex']);
+                Route::post('/messaging/templates', [MessagingController::class, 'templatesStore']);
+                Route::get('/messaging/templates/{template}', [MessagingController::class, 'templatesShow']);
+                Route::put('/messaging/templates/{template}', [MessagingController::class, 'templatesUpdate']);
+                Route::delete('/messaging/templates/{template}', [MessagingController::class, 'templatesDestroy']);
+                Route::post('/messaging/templates/{template}/approve', [MessagingController::class, 'templatesApprove']);
 
-            // Message campaigns
-            Route::get('/messaging/campaigns', [MessagingController::class, 'campaignsIndex']);
-            Route::post('/messaging/campaigns', [MessagingController::class, 'campaignsStore']);
-            Route::get('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsShow']);
-            Route::put('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsUpdate']);
-            Route::delete('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsDestroy']);
-            Route::post('/messaging/campaigns/{messageCampaign}/approve', [MessagingController::class, 'campaignsApprove']);
-            Route::post('/messaging/campaigns/{messageCampaign}/send', [MessagingController::class, 'campaignsSend']);
-            Route::get('/messaging/campaigns/{messageCampaign}/logs', [MessagingController::class, 'campaignLogs']);
-            Route::get('/messaging/audience-count', [MessagingController::class, 'audienceCount']);
-            Route::get('/messaging/stats', [MessagingController::class, 'campaignsStats']);
+                // Message campaigns
+                Route::get('/messaging/campaigns', [MessagingController::class, 'campaignsIndex']);
+                Route::post('/messaging/campaigns', [MessagingController::class, 'campaignsStore']);
+                Route::get('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsShow']);
+                Route::put('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsUpdate']);
+                Route::delete('/messaging/campaigns/{messageCampaign}', [MessagingController::class, 'campaignsDestroy']);
+                Route::post('/messaging/campaigns/{messageCampaign}/approve', [MessagingController::class, 'campaignsApprove']);
+                Route::post('/messaging/campaigns/{messageCampaign}/send', [MessagingController::class, 'campaignsSend']);
+                Route::get('/messaging/campaigns/{messageCampaign}/logs', [MessagingController::class, 'campaignLogs']);
+                Route::get('/messaging/audience-count', [MessagingController::class, 'audienceCount']);
+                Route::get('/messaging/stats', [MessagingController::class, 'campaignsStats']);
+            });
 
             // --- Phase 1G: Finance ---
 
-            // Budgets
-            Route::get('/finance/budgets', [FinanceController::class, 'budgetsIndex']);
-            Route::post('/finance/budgets', [FinanceController::class, 'budgetsStore']);
-            Route::get('/finance/budgets/{budget}', [FinanceController::class, 'budgetsShow']);
-            Route::put('/finance/budgets/{budget}', [FinanceController::class, 'budgetsUpdate']);
-            Route::delete('/finance/budgets/{budget}', [FinanceController::class, 'budgetsDestroy']);
+            Route::middleware('module:finance')->group(function () {
+                // Budgets
+                Route::get('/finance/budgets', [FinanceController::class, 'budgetsIndex']);
+                Route::post('/finance/budgets', [FinanceController::class, 'budgetsStore']);
+                Route::get('/finance/budgets/{budget}', [FinanceController::class, 'budgetsShow']);
+                Route::put('/finance/budgets/{budget}', [FinanceController::class, 'budgetsUpdate']);
+                Route::delete('/finance/budgets/{budget}', [FinanceController::class, 'budgetsDestroy']);
 
-            // Expenses
-            Route::get('/finance/expenses', [FinanceController::class, 'expensesIndex']);
-            Route::post('/finance/expenses', [FinanceController::class, 'expensesStore']);
-            Route::get('/finance/expenses/export', [FinanceController::class, 'expensesExport']);
-            Route::get('/finance/expenses/{expense}', [FinanceController::class, 'expensesShow']);
-            Route::put('/finance/expenses/{expense}', [FinanceController::class, 'expensesUpdate']);
-            Route::delete('/finance/expenses/{expense}', [FinanceController::class, 'expensesDestroy']);
-            Route::post('/finance/expenses/{expense}/approve', [FinanceController::class, 'expensesApprove']);
-            Route::post('/finance/expenses/{expense}/reject', [FinanceController::class, 'expensesReject']);
+                // Expenses
+                Route::get('/finance/expenses', [FinanceController::class, 'expensesIndex']);
+                Route::post('/finance/expenses', [FinanceController::class, 'expensesStore']);
+                Route::get('/finance/expenses/export', [FinanceController::class, 'expensesExport']);
+                Route::get('/finance/expenses/{expense}', [FinanceController::class, 'expensesShow']);
+                Route::put('/finance/expenses/{expense}', [FinanceController::class, 'expensesUpdate']);
+                Route::delete('/finance/expenses/{expense}', [FinanceController::class, 'expensesDestroy']);
+                Route::post('/finance/expenses/{expense}/approve', [FinanceController::class, 'expensesApprove']);
+                Route::post('/finance/expenses/{expense}/reject', [FinanceController::class, 'expensesReject']);
 
-            // Donations
-            Route::get('/finance/donations', [FinanceController::class, 'donationsIndex']);
-            Route::post('/finance/donations', [FinanceController::class, 'donationsStore']);
-            Route::get('/finance/donations/export', [FinanceController::class, 'donationsExport']);
-            Route::get('/finance/donations/{donation}', [FinanceController::class, 'donationsShow']);
+                // Donations
+                Route::get('/finance/donations', [FinanceController::class, 'donationsIndex']);
+                Route::post('/finance/donations', [FinanceController::class, 'donationsStore']);
+                Route::get('/finance/donations/export', [FinanceController::class, 'donationsExport']);
+                Route::get('/finance/donations/{donation}', [FinanceController::class, 'donationsShow']);
 
-            // Finance summary
-            Route::get('/finance/summary', [FinanceController::class, 'financeSummary']);
+                // Finance summary
+                Route::get('/finance/summary', [FinanceController::class, 'financeSummary']);
+            });
 
-            // --- Compliance & ABAC ---
-            Route::get('/compliance/dashboard', [ComplianceController::class, 'dashboard']);
-            Route::get('/compliance/alerts', [ComplianceController::class, 'alerts']);
-            Route::get('/compliance/alerts/count', [ComplianceController::class, 'alertCount']);
-            Route::post('/compliance/alerts/{alert}/resolve', [ComplianceController::class, 'resolveAlert']);
-            Route::get('/compliance/settings', [ComplianceController::class, 'settings']);
-            Route::put('/compliance/settings', [ComplianceController::class, 'updateSettings'])
-                ->middleware('biometric:high');
-            Route::get('/compliance/report/iebc', [ComplianceController::class, 'iebcReport']);
-            Route::get('/compliance/report/donors', [ComplianceController::class, 'donorReport'])
-                ->middleware('biometric:standard');
+            Route::middleware('module:ledger')->group(function () {
+                // --- Compliance & ABAC ---
+                Route::get('/compliance/dashboard', [ComplianceController::class, 'dashboard']);
+                Route::get('/compliance/alerts', [ComplianceController::class, 'alerts']);
+                Route::get('/compliance/alerts/count', [ComplianceController::class, 'alertCount']);
+                Route::post('/compliance/alerts/{alert}/resolve', [ComplianceController::class, 'resolveAlert']);
+                Route::get('/compliance/settings', [ComplianceController::class, 'settings']);
+                Route::put('/compliance/settings', [ComplianceController::class, 'updateSettings'])
+                    ->middleware('biometric:high');
+                Route::get('/compliance/report/iebc', [ComplianceController::class, 'iebcReport']);
+                Route::get('/compliance/report/donors', [ComplianceController::class, 'donorReport'])
+                    ->middleware('biometric:standard');
 
-            // --- Double-Entry Ledger ---
-            Route::get('/ledger/chart-of-accounts', [LedgerController::class, 'chartOfAccounts']);
-            Route::get('/ledger/journal-entries', [LedgerController::class, 'journalEntries']);
-            Route::get('/ledger/journal-entries/{journalEntry}', [LedgerController::class, 'journalEntryShow']);
-            Route::post('/ledger/journal-entries', [LedgerController::class, 'manualEntry']);
-            Route::post('/ledger/journal-entries/{journalEntry}/reverse', [LedgerController::class, 'reverseEntry']);
-            Route::get('/ledger/trial-balance', [LedgerController::class, 'trialBalance']);
-            Route::get('/ledger/income-statement', [LedgerController::class, 'incomeStatement']);
-            Route::get('/ledger/balance-sheet', [LedgerController::class, 'balanceSheet']);
-            Route::get('/ledger/cash-flow', [LedgerController::class, 'cashFlow']);
-            Route::get('/ledger/budget-vs-actual', [LedgerController::class, 'budgetVsActual']);
-            Route::get('/ledger/integrity', [LedgerController::class, 'integrity']);
-            Route::get('/ledger/funds', [LedgerController::class, 'funds']);
-            Route::post('/ledger/funds', [LedgerController::class, 'createFund']);
-            Route::get('/ledger/funds/summary', [LedgerController::class, 'fundSummary']);
+                // --- Double-Entry Ledger ---
+                Route::get('/ledger/chart-of-accounts', [LedgerController::class, 'chartOfAccounts']);
+                Route::get('/ledger/journal-entries', [LedgerController::class, 'journalEntries']);
+                Route::get('/ledger/journal-entries/{journalEntry}', [LedgerController::class, 'journalEntryShow']);
+                Route::post('/ledger/journal-entries', [LedgerController::class, 'manualEntry']);
+                Route::post('/ledger/journal-entries/{journalEntry}/reverse', [LedgerController::class, 'reverseEntry']);
+                Route::get('/ledger/trial-balance', [LedgerController::class, 'trialBalance']);
+                Route::get('/ledger/income-statement', [LedgerController::class, 'incomeStatement']);
+                Route::get('/ledger/balance-sheet', [LedgerController::class, 'balanceSheet']);
+                Route::get('/ledger/cash-flow', [LedgerController::class, 'cashFlow']);
+                Route::get('/ledger/budget-vs-actual', [LedgerController::class, 'budgetVsActual']);
+                Route::get('/ledger/integrity', [LedgerController::class, 'integrity']);
+                Route::get('/ledger/funds', [LedgerController::class, 'funds']);
+                Route::post('/ledger/funds', [LedgerController::class, 'createFund']);
+                Route::get('/ledger/funds/summary', [LedgerController::class, 'fundSummary']);
+            });
 
-            // M-Pesa STK Push
-            Route::post('/finance/mpesa/stk-push', [FinanceController::class, 'mpesaStkPush']);
-            Route::post('/finance/mpesa/stk-query', [FinanceController::class, 'mpesaStkQuery']);
+            Route::middleware('module:finance')->group(function () {
+                // M-Pesa STK Push
+                Route::post('/finance/mpesa/stk-push', [FinanceController::class, 'mpesaStkPush']);
+                Route::post('/finance/mpesa/stk-query', [FinanceController::class, 'mpesaStkQuery']);
+            });
 
             // --- Phase 1H: Election Day ---
 
-            // Polling stations
-            Route::get('/election-day/stations', [ElectionDayController::class, 'stationsIndex']);
-            Route::post('/election-day/stations', [ElectionDayController::class, 'stationsStore']);
-            Route::post('/election-day/stations/import-iebc', [ElectionDayController::class, 'importIebcStations']);
-            Route::get('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsShow']);
-            Route::put('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsUpdate']);
-            Route::delete('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsDestroy']);
+            Route::middleware('module:election_day')->group(function () {
+                // Polling stations
+                Route::get('/election-day/stations', [ElectionDayController::class, 'stationsIndex']);
+                Route::post('/election-day/stations', [ElectionDayController::class, 'stationsStore']);
+                Route::post('/election-day/stations/import-iebc', [ElectionDayController::class, 'importIebcStations']);
+                Route::get('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsShow']);
+                Route::put('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsUpdate']);
+                Route::delete('/election-day/stations/{pollingStation}', [ElectionDayController::class, 'stationsDestroy']);
 
-            // Summary & agent deployment
-            Route::get('/election-day/summary', [ElectionDayController::class, 'summary']);
-            Route::get('/election-day/agent-deployment', [ElectionDayController::class, 'agentDeployment']);
+                // Summary & agent deployment
+                Route::get('/election-day/summary', [ElectionDayController::class, 'summary']);
+                Route::get('/election-day/agent-deployment', [ElectionDayController::class, 'agentDeployment']);
 
-            // CSV exports (defined before wildcard routes to avoid conflicts)
-            Route::get('/election-day/tallies/export/csv', [ElectionDayController::class, 'talliesExportCsv']);
-            Route::get('/election-day/incidents/export/csv', [ElectionDayController::class, 'incidentsExportCsv']);
+                // CSV exports (defined before wildcard routes to avoid conflicts)
+                Route::get('/election-day/tallies/export/csv', [ElectionDayController::class, 'talliesExportCsv']);
+                Route::get('/election-day/incidents/export/csv', [ElectionDayController::class, 'incidentsExportCsv']);
 
-            // Tally results
-            Route::get('/election-day/tallies', [ElectionDayController::class, 'talliesIndex']);
-            Route::post('/election-day/tallies', [ElectionDayController::class, 'talliesStore']);
-            Route::get('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesShow']);
-            Route::put('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesUpdate']);
-            Route::post('/election-day/tallies/{tallyResult}/verify', [ElectionDayController::class, 'talliesVerify']);
-            Route::post('/election-day/tallies/{tallyResult}/dispute', [ElectionDayController::class, 'talliesDispute']);
-            Route::delete('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesDestroy']);
+                // Tally results
+                Route::get('/election-day/tallies', [ElectionDayController::class, 'talliesIndex']);
+                Route::post('/election-day/tallies', [ElectionDayController::class, 'talliesStore']);
+                Route::get('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesShow']);
+                Route::put('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesUpdate']);
+                Route::post('/election-day/tallies/{tallyResult}/verify', [ElectionDayController::class, 'talliesVerify']);
+                Route::post('/election-day/tallies/{tallyResult}/dispute', [ElectionDayController::class, 'talliesDispute']);
+                Route::delete('/election-day/tallies/{tallyResult}', [ElectionDayController::class, 'talliesDestroy']);
 
-            // Tally board + command centre + situation room
-            Route::get('/election-day/tally-board', [ElectionDayController::class, 'tallyBoard']);
-            Route::get('/election-day/command-centre', [ElectionDayController::class, 'commandCentre']);
-            Route::get('/election-day/situation-room', [ElectionDayController::class, 'situationRoom']);
+                // Tally board + command centre + situation room
+                Route::get('/election-day/tally-board', [ElectionDayController::class, 'tallyBoard']);
+                Route::get('/election-day/command-centre', [ElectionDayController::class, 'commandCentre']);
+                Route::get('/election-day/situation-room', [ElectionDayController::class, 'situationRoom']);
 
-            // Incidents
-            Route::get('/election-day/incidents', [ElectionDayController::class, 'incidentsIndex']);
-            Route::post('/election-day/incidents', [ElectionDayController::class, 'incidentsStoreWithAlert']);
-            Route::get('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsShow']);
-            Route::put('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsUpdate']);
-            Route::post('/election-day/incidents/{incident}/resolve', [ElectionDayController::class, 'incidentsResolve']);
-            Route::post('/election-day/incidents/{incident}/escalate', [ElectionDayController::class, 'incidentsEscalate']);
-            Route::delete('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsDestroy']);
+                // Incidents
+                Route::get('/election-day/incidents', [ElectionDayController::class, 'incidentsIndex']);
+                Route::post('/election-day/incidents', [ElectionDayController::class, 'incidentsStoreWithAlert']);
+                Route::get('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsShow']);
+                Route::put('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsUpdate']);
+                Route::post('/election-day/incidents/{incident}/resolve', [ElectionDayController::class, 'incidentsResolve']);
+                Route::post('/election-day/incidents/{incident}/escalate', [ElectionDayController::class, 'incidentsEscalate']);
+                Route::delete('/election-day/incidents/{incident}', [ElectionDayController::class, 'incidentsDestroy']);
 
-            // Result forms (Form 34A/B/C)
-            Route::get('/election-day/forms', [ElectionDayController::class, 'formsIndex']);
-            Route::post('/election-day/forms', [ElectionDayController::class, 'formsStore']);
-            Route::get('/election-day/forms/{resultForm}', [ElectionDayController::class, 'formsShow']);
-            Route::post('/election-day/forms/{resultForm}/verify', [ElectionDayController::class, 'formsVerify']);
-            Route::post('/election-day/forms/{resultForm}/dispute', [ElectionDayController::class, 'formsDispute']);
-            Route::delete('/election-day/forms/{resultForm}', [ElectionDayController::class, 'formsDestroy']);
-            Route::get('/election-day/forms/{resultForm}/compare', [ElectionDayController::class, 'formsCompare']);
+                // Result forms (Form 34A/B/C)
+                Route::get('/election-day/forms', [ElectionDayController::class, 'formsIndex']);
+                Route::post('/election-day/forms', [ElectionDayController::class, 'formsStore']);
+                Route::get('/election-day/forms/{resultForm}', [ElectionDayController::class, 'formsShow']);
+                Route::post('/election-day/forms/{resultForm}/verify', [ElectionDayController::class, 'formsVerify']);
+                Route::post('/election-day/forms/{resultForm}/dispute', [ElectionDayController::class, 'formsDispute']);
+                Route::delete('/election-day/forms/{resultForm}', [ElectionDayController::class, 'formsDestroy']);
+                Route::get('/election-day/forms/{resultForm}/compare', [ElectionDayController::class, 'formsCompare']);
+            });
 
             // --- Phase 1I: Reports & Analytics ---
 
-            // Reports
-            Route::get('/reports', [ReportsController::class, 'index']);
-            Route::post('/reports/generate', [ReportsController::class, 'generate']);
-            Route::get('/reports/export', [ReportsController::class, 'export']);
-            Route::get('/reports/{report}', [ReportsController::class, 'show']);
-            Route::delete('/reports/{report}', [ReportsController::class, 'destroy']);
+            Route::middleware('module:analytics')->group(function () {
+                // Reports
+                Route::get('/reports', [ReportsController::class, 'index']);
+                Route::post('/reports/generate', [ReportsController::class, 'generate']);
+                Route::get('/reports/export', [ReportsController::class, 'export']);
+                Route::get('/reports/{report}', [ReportsController::class, 'show']);
+                Route::delete('/reports/{report}', [ReportsController::class, 'destroy']);
 
-            // Analytics
-            Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
-            Route::get('/analytics/voter-growth', [AnalyticsController::class, 'voterGrowth']);
-            Route::get('/analytics/field-activity', [AnalyticsController::class, 'fieldActivity']);
-            Route::get('/analytics/finance-trends', [AnalyticsController::class, 'financeTrends']);
-            Route::get('/analytics/geographic', [AnalyticsController::class, 'geographicBreakdown']);
+                // Analytics
+                Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
+                Route::get('/analytics/voter-growth', [AnalyticsController::class, 'voterGrowth']);
+                Route::get('/analytics/field-activity', [AnalyticsController::class, 'fieldActivity']);
+                Route::get('/analytics/finance-trends', [AnalyticsController::class, 'financeTrends']);
+                Route::get('/analytics/geographic', [AnalyticsController::class, 'geographicBreakdown']);
+            });
         });
     });
 });

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             DemoSiteSeeder::class,
             ElectionDaySeeder::class,
             SurveySeeder::class,
+            LicensingSeeder::class,
         ]);
     }
 }
