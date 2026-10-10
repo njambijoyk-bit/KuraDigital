@@ -35,7 +35,7 @@ description: Test the Finance Compliance, Encryption, and Biometric features end
 - **WebAuthnCredential model table name:** The model class name generates `web_authn_credentials` but the migration creates `webauthn_credentials`. The model needs `protected $table = 'webauthn_credentials'`.
 - **Encrypted casts on existing data:** Models (Donation, Expense, MpesaTransaction) have `encrypted` casts on PII fields. Existing plaintext data will throw `DecryptException` on read. New data inserted after casts are applied works fine.
 - **NaN% weight in score factors:** The compliance dashboard Overview tab shows "NaN% weight" for score factors — the API response doesn't include weight percentages.
-- **Vite esbuild scan error:** Dev mode may show "No matching export in app.jsx" — this is pre-existing and doesn't block testing.
+- **Vite esbuild scan error:** Dev mode may show "No matching export in main.jsx" — this is pre-existing and doesn't block testing.
 
 ## API Test Endpoints
 
