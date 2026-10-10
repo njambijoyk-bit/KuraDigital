@@ -44,6 +44,8 @@ return new class extends Migration
 
             DB::statement('INSERT INTO survey_responses SELECT * FROM survey_responses_old');
             Schema::drop('survey_responses_old');
+        } elseif ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE survey_responses ALTER COLUMN submitted_by DROP NOT NULL');
         } else {
             DB::statement('ALTER TABLE survey_responses MODIFY submitted_by BIGINT UNSIGNED NULL');
         }
@@ -52,7 +54,9 @@ return new class extends Migration
     public function down(): void
     {
         $driver = DB::getDriverName();
-        if ($driver !== 'sqlite') {
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE survey_responses ALTER COLUMN submitted_by SET NOT NULL');
+        } elseif ($driver !== 'sqlite') {
             DB::statement('ALTER TABLE survey_responses MODIFY submitted_by BIGINT UNSIGNED NOT NULL');
         }
     }
